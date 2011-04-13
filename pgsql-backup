@@ -23,7 +23,10 @@
 VER=0.9.7
 
 # Path to options file
-if [ -f '~/.pgsql-backup.conf' ] ; then
+user_rc="$1"
+if [[ -n "$user_rc" -a -f "$user_rc" ]] ; then
+	rc_fname="$user_rc"
+elif [ -f '~/.pgsql-backup.conf' ] ; then
 	rc_fname='~/.pgsql-backup.conf'
 elif [ -f '/etc/pgsql-backup.conf' ] ; then
 	rc_fname='/etc/pgsql-backup.conf'
