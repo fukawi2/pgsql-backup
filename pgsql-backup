@@ -26,11 +26,11 @@ VER=0.9.7
 user_rc="$1"
 if [[ -n "$user_rc" -a -f "$user_rc" ]] ; then
 	rc_fname="$user_rc"
-elif [ -f '~/.pgsql-backup.conf' ] ; then
+elif [[ -f '~/.pgsql-backup.conf' ]] ; then
 	rc_fname='~/.pgsql-backup.conf'
-elif [ -f '/etc/pgsql-backup.conf' ] ; then
+elif [[ -f '/etc/pgsql-backup.conf' ]] ; then
 	rc_fname='/etc/pgsql-backup.conf'
-elif [ -f '/etc/pgsql-backup/options.conf' ] ; then
+elif [[ -f '/etc/pgsql-backup/options.conf' ]] ; then
 	rc_fname='/etc/pgsql-backup/options.conf'
 else
 	echo 'Configuration file not found!'
@@ -38,7 +38,7 @@ else
 fi
 
 # Load the configuration file
-if [ -r "$rc_fname" ] ; then
+if [[ -r "$rc_fname" ]] ; then
 	source $rc_fname || { echo "Error while reading configuration file: $rc_fname"; exit 1; }
 else
 	echo "Unable to read configuration file: $rc_fname"
@@ -138,15 +138,15 @@ OPT="--blobs --format=${DUMPFORMAT}"			# OPT string for use with pg_dump
 [[ ! -e "$BACKUPDIR/daily" ]]	&& $MKDIR -p "$BACKUPDIR/daily"
 [[ ! -e "$BACKUPDIR/weekly" ]]	&& $MKDIR -p "$BACKUPDIR/weekly"
 [[ ! -e "$BACKUPDIR/monthly" ]]	&& $MKDIR -p "$BACKUPDIR/monthly"
-if [ "$LATEST" = "yes" ] ; then
+if [[ "$LATEST" = "yes" ]] ; then
 	[[ ! -e "$BACKUPDIR/latest" ]] && $MKDIR -p "$BACKUPDIR/latest"
 	$RM -f $BACKUPDIR/latest/*
 fi
 
 # Output Extension (depends on the output format)
-if [ "$DUMPFORMAT" = 'tar' ] ; then
+if [[ "$DUMPFORMAT" = 'tar' ]] ; then
 	OUTEXT='tar'
-elif [ "$DUMPFORMAT" = 'plain' ] ; then
+elif [[ "$DUMPFORMAT" = 'plain' ]] ; then
 	OUTEXT='sql'
 else
 	echo "Invalid output format configured. Defaulting to 'plain'"
@@ -172,19 +172,19 @@ SUFFIX=""
 compression () {
 	local _fname="$1"
 
-	if [ "$COMP" = "gzip" ]; then
+	if [[ "$COMP" = "gzip" ]] ; then
 		echo Backup Information for "$_fname"
 		$GZIP -f "$_fname"
 		$GZIP -l "$_fname.gz"
 		SUFFIX=".gz"
-	elif [ "$COMP" = "bzip2" ]; then
+	elif [[ "$COMP" = "bzip2" ]] ; then
 		echo Compression information for "$_fname.bz2"
 		$BZIP2 -f -v $_fname 2>&1
 		SUFFIX=".bz2"
 	else
 		echo "No compression option set, check advanced settings"
 	fi
-	if [ "$LATEST" = "yes" ]; then
+	if [[ "$LATEST" = "yes" ]] ; then
 		$LN -f ${_fname}${SUFFIX} "$BACKUPDIR/latest/"
 	fi	
 	return 0
@@ -193,8 +193,7 @@ compression () {
 #########################################
 
 # Run command before we begin
-if [ "$PREBACKUP" ]
-	then
+if [[ -n "$PREBACKUP" ]] ; then
 	echo ======================================================================
 	echo "Prebackup command output."
 	echo
@@ -204,8 +203,8 @@ if [ "$PREBACKUP" ]
 	echo
 fi
 
-if [ "$SEPDIR" = "yes" ]; then # Check if CREATE DATABSE should be included in Dump
-	if [ "$CREATE_DATABASE" = "no" ]; then
+if [[ "$SEPDIR" = "yes" ]] ; then # Check if CREATE DATABSE should be included in Dump
+	if [[ "$CREATE_DATABASE" = "no" ]] ; then
 		OPT="$OPT --no-create"
 	else
 		OPT="$OPT --create"
@@ -213,9 +212,9 @@ if [ "$SEPDIR" = "yes" ]; then # Check if CREATE DATABSE should be included in D
 fi
 
 # Hostname for LOG information
-if [ "$DBHOST" = "localhost" ]; then
+if [[ "$DBHOST" = "localhost" ]] ; then
 	HOST=`hostname`
-	if [ "$SOCKET" ]; then
+	if [[ "$SOCKET" ]] ; then
 		OPT="$OPT --host=$SOCKET"
 	fi
 else
@@ -223,7 +222,7 @@ else
 fi
 
 # If backing up all DBs on the server
-if [ "$DBNAMES" = "all" ]; then
+if [[ "$DBNAMES" = "all" ]] ; then
 	export PGPASSWORD="$DB_PASS"
 	DBNAMES=`$PSQL --username=$USERNAME --dbname=$CONNECT_DB -P format=Unaligned -tqc 'SELECT datname FROM pg_database;' | $SED 's/ /%/g'`
 
@@ -247,7 +246,7 @@ Started $($DATE)
 EOT
 
 # Monthly Full Backup of all Databases on the 1st of the month
-if [ $DOM = "01" ]; then
+if [[ $DOM = "01" ]] ; then
 	for MDB in $MDBNAMES ; do
 		MDB="`echo $MDB | $SED 's/%/ /g'`"
 
@@ -268,7 +267,7 @@ for DB in $DBNAMES ; do
 	[[ ! -e "$BACKUPDIR/daily/$DB" ]]	&& $MKDIR -p "$BACKUPDIR/daily/$DB"
 	[[ ! -e "$BACKUPDIR/weekly/$DB" ]]	&& $MKDIR -p "$BACKUPDIR/weekly/$DB"
 	
-	if [ $DNOW = $DOWEEKLY ] ; then
+	if [[ $DNOW = $DOWEEKLY ]] ; then
 		# Weekly Backup
 		echo "Weekly Backup of Database '$DB'"
 		echo "Rotating 5 weeks Backups..."
@@ -308,7 +307,7 @@ $($DU -hs "$BACKUPDIR")
 EOT
 
 # Run command when we're done
-if [ "$POSTBACKUP" ] ; then
+if [[ -n "$POSTBACKUP" ]] ; then
 	echo ======================================================================
 	echo "Postbackup command output."
 	echo
@@ -323,25 +322,25 @@ exec 1>&7 7>&-      # Restore stdout and close file descriptor #7.
 
 case "$MAILCONTENT" in
 'files')
-	if [ -s "$log_stderr" ] ; then
+	if [[ -s "$log_stderr" ]] ; then
 		# Include error log if is larger than zero.
 		BACKUPFILES="$BACKUPFILES $log_stderr"
 		ERRORNOTE="WARNING: Error Reported - "
 	fi
 	# Get backup size
 	ATTSIZE=$($DU -c $BACKUPFILES | $GREP "[[:digit:][:space:]]total$" | $SED s/\s*total//)
-	if [ $MAXATTSIZE -lt $ATTSIZE ] ; then
+	if [[ $MAXATTSIZE -lt $ATTSIZE ]] ; then
 		$CAT "$log_stdout" | $MAILX -s "WARNING! - PostgreSQL Backup exceeds set maximum attachment size on $HOST - $FULLDATE" $MAILADDR
 	fi
 ;;
 'log')
 	$CAT "$log_stdout" | $MAILX -s "PostgreSQL Backup Log for $HOST - $FULLDATE" $MAILADDR
-	if [ -s "$log_stderr" ] ; then
+	if [[ -s "$log_stderr" ]] ; then
 		$CAT "$log_stderr" | $MAILX -s "ERRORS REPORTED: PostgreSQL Backup error Log for $HOST - $FULLDATE" $MAILADDR
 	fi
 ;;
 'quiet')
-	if [ -s "$log_stderr" ] ; then
+	if [[ -s "$log_stderr" ]] ; then
 		$MAILX -s "ERRORS REPORTED: PostgreSQL Backup error Log for $HOST - $FULLDATE" $MAILADDR <<EOT
 =============================================
 !!!!!! WARNING !!!!!!
@@ -356,7 +355,7 @@ EOT
 	fi
 ;;
 *)
-	if [ -s "$log_stderr" ] ; then
+	if [[ -s "$log_stderr" ]] ; then
 		$CAT <<EOT
 =============================================
 !!!!!! WARNING !!!!!!
