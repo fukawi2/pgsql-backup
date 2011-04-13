@@ -39,7 +39,7 @@ fi
 
 # Load the configuration file
 if [ -r "$rc_fname" ] ; then
-	source $rc_fname
+	source $rc_fname || { echo "Error while reading configuration file: $rc_fname"; exit 1; }
 else
 	echo "Unable to read configuration file: $rc_fname"
 	exit 1
