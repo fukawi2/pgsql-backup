@@ -377,4 +377,5 @@ esac
 $RM -f "$log_stdout"
 $RM -f "$log_stderr"
 
-exit [[ -s "$log_stderr" ]]
+[[ -s "$log_stderr" ]]
+exit $?
