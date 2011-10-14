@@ -374,7 +374,7 @@ EOT
 esac
 
 # Clean up Logfile
-eval $RM -f "$log_stdout"
-eval $RM -f "$log_stderr"
+$RM -f "$log_stdout"
+$RM -f "$log_stderr"
 
 exit [[ -s "$log_stderr" ]]
