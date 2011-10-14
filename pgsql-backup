@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ### Backup specified PostgreSQL Databases to file
 # Original script:	MySQL Backup Script
 #			VER. 2.5 - http://sourceforge.net/projects/automysqlbackup/
