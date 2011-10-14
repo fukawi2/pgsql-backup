@@ -45,14 +45,6 @@ else
 	exit 1
 fi
 
-# IO redirection for logging.
-touch $log_stdout
-exec 6>&1           # Link file descriptor #6 with stdout.
-exec > $log_stdout     # stdout replaced with file $log_stdout.
-touch $log_stderr
-exec 7>&2           # Link file descriptor #7 with stderr.
-exec 2> $log_stderr     # stderr replaced with file $log_stderr.
-
 echo "Using configuration file '$rc_fname'"
 
 # Validate the configuration
@@ -154,6 +146,14 @@ else
 	OUTEXT='sql'
 fi
 OPT="$OPT --format=${DUMPFORMAT}"
+
+# IO redirection for logging.
+touch $log_stdout
+exec 6>&1           # Link file descriptor #6 with stdout.
+exec > $log_stdout     # stdout replaced with file $log_stdout.
+touch $log_stderr
+exec 7>&2           # Link file descriptor #7 with stderr.
+exec 2> $log_stderr     # stderr replaced with file $log_stderr.
 
 #########################
 # Functions
