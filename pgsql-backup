@@ -24,7 +24,7 @@ VER=0.9.7
 
 # Path to options file
 user_rc="$1"
-if [[ -n "$user_rc" -a -f "$user_rc" ]] ; then
+if [[ -n "$user_rc" && -f "$user_rc" ]] ; then
 	rc_fname="$user_rc"
 elif [[ -f '~/.pgsql-backup.conf' ]] ; then
 	rc_fname='~/.pgsql-backup.conf'
@@ -89,8 +89,8 @@ MISSING_BIN=''
 [[ -x "$GREP" ]]	|| MISSING_BIN="$MISSING_BIN grep not found: $GREP\n"
 [[ -x "$CAT" ]]		|| MISSING_BIN="$MISSING_BIN cat not found: $CAT\n"
 [[ -x "$MAILX" ]]	|| MISSING_BIN="$MISSING_BIN mail not found: $MAILX\n"
-[[ ! -x "$GZIP" -a "$COMP" = 'gzip' ]]		&& MISSING_BIN="$MISSING_BIN gzip not found: $GZIP\n"
-[[ ! -x "$BZIP2" -a "$COMP" = 'bzip2' ]]	&& MISSING_BIN="$MISSING_BIN bzip2 not found: $BZIP2\n"
+[[ ! -x "$GZIP" && "$COMP" = 'gzip' ]]		&& MISSING_BIN="$MISSING_BIN gzip not found: $GZIP\n"
+[[ ! -x "$BZIP2" && "$COMP" = 'bzip2' ]]	&& MISSING_BIN="$MISSING_BIN bzip2 not found: $BZIP2\n"
 if [ -n "$MISSING_BIN" ] ; then
 	echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set."
 	echo "The missing files are:"
