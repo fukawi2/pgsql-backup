@@ -13,7 +13,7 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -186,7 +186,7 @@ compression () {
 	fi
 	if [[ "$LATEST" = "yes" ]] ; then
 		$LN -f ${_fname}${SUFFIX} "$BACKUPDIR/latest/"
-	fi	
+	fi
 	return 0
 }
 
@@ -262,11 +262,11 @@ fi
 
 for DB in $DBNAMES ; do
 	DB="`echo $DB | $SED 's/%/ /g'`"
-	
+
 	# Create Seperate directory for each DB
 	[[ ! -e "$BACKUPDIR/daily/$DB" ]]	&& $MKDIR -p "$BACKUPDIR/daily/$DB"
 	[[ ! -e "$BACKUPDIR/weekly/$DB" ]]	&& $MKDIR -p "$BACKUPDIR/weekly/$DB"
-	
+
 	if [[ $DNOW = $DOWEEKLY ]] ; then
 		# Weekly Backup
 		echo "Weekly Backup of Database '$DB'"
