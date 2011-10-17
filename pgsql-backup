@@ -373,9 +373,14 @@ EOT
 ;;
 esac
 
+if [[ -s "$log_stderr" ]]; then
+    STATUS=1
+else
+    STATUS=0
+fi
+
 # Clean up Logfile
 $RM -f "$log_stdout"
 $RM -f "$log_stderr"
 
-[[ -s "$log_stderr" ]]
-exit $?
+exit $STATUS
