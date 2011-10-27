@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ### Backup specified PostgreSQL Databases to file
 # Original script:	MySQL Backup Script
 #			VER. 2.5 - http://sourceforge.net/projects/automysqlbackup/
@@ -13,7 +13,7 @@
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -24,7 +24,7 @@ VER=0.9.7
 
 # Path to options file
 user_rc="$1"
-if [[ -n "$user_rc" -a -f "$user_rc" ]] ; then
+if [[ -n "$user_rc" && -f "$user_rc" ]] ; then
 	rc_fname="$user_rc"
 elif [[ -f '~/.pgsql-backup.conf' ]] ; then
 	rc_fname='~/.pgsql-backup.conf'
@@ -44,14 +44,6 @@ else
 	echo "Unable to read configuration file: $rc_fname"
 	exit 1
 fi
-
-# IO redirection for logging.
-touch $log_stdout
-exec 6>&1           # Link file descriptor #6 with stdout.
-exec > $log_stdout     # stdout replaced with file $log_stdout.
-touch $log_stderr
-exec 7>&2           # Link file descriptor #7 with stderr.
-exec 2> $log_stderr     # stderr replaced with file $log_stderr.
 
 echo "Using configuration file '$rc_fname'"
 
@@ -89,8 +81,8 @@ MISSING_BIN=''
 [[ -x "$GREP" ]]	|| MISSING_BIN="$MISSING_BIN grep not found: $GREP\n"
 [[ -x "$CAT" ]]		|| MISSING_BIN="$MISSING_BIN cat not found: $CAT\n"
 [[ -x "$MAILX" ]]	|| MISSING_BIN="$MISSING_BIN mail not found: $MAILX\n"
-[[ ! -x "$GZIP" -a "$COMP" = 'gzip' ]]		&& MISSING_BIN="$MISSING_BIN gzip not found: $GZIP\n"
-[[ ! -x "$BZIP2" -a "$COMP" = 'bzip2' ]]	&& MISSING_BIN="$MISSING_BIN bzip2 not found: $BZIP2\n"
+[[ ! -x "$GZIP" && "$COMP" = 'gzip' ]]		&& MISSING_BIN="$MISSING_BIN gzip not found: $GZIP\n"
+[[ ! -x "$BZIP2" && "$COMP" = 'bzip2' ]]	&& MISSING_BIN="$MISSING_BIN bzip2 not found: $BZIP2\n"
 if [ -n "$MISSING_BIN" ] ; then
 	echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set."
 	echo "The missing files are:"
@@ -155,6 +147,14 @@ else
 fi
 OPT="$OPT --format=${DUMPFORMAT}"
 
+# IO redirection for logging.
+touch $log_stdout
+exec 6>&1           # Link file descriptor #6 with stdout.
+exec > $log_stdout     # stdout replaced with file $log_stdout.
+touch $log_stderr
+exec 7>&2           # Link file descriptor #7 with stderr.
+exec 2> $log_stderr     # stderr replaced with file $log_stderr.
+
 #########################
 # Functions
 
@@ -186,7 +186,7 @@ compression () {
 	fi
 	if [[ "$LATEST" = "yes" ]] ; then
 		$LN -f ${_fname}${SUFFIX} "$BACKUPDIR/latest/"
-	fi	
+	fi
 	return 0
 }
 
@@ -262,11 +262,11 @@ fi
 
 for DB in $DBNAMES ; do
 	DB="`echo $DB | $SED 's/%/ /g'`"
-	
+
 	# Create Seperate directory for each DB
 	[[ ! -e "$BACKUPDIR/daily/$DB" ]]	&& $MKDIR -p "$BACKUPDIR/daily/$DB"
 	[[ ! -e "$BACKUPDIR/weekly/$DB" ]]	&& $MKDIR -p "$BACKUPDIR/weekly/$DB"
-	
+
 	if [[ $DNOW = $DOWEEKLY ]] ; then
 		# Weekly Backup
 		echo "Weekly Backup of Database '$DB'"
@@ -366,14 +366,21 @@ Full Log Below
 =============================================
 $($CAT $log_stdout)
 =============================================
+EOT
 	else
 		$CAT "$log_stdout"
 	fi
 ;;
 esac
 
-# Clean up Logfile
-eval $RM -f "$log_stdout"
-eval $RM -f "$log_stderr"
+if [[ -s "$log_stderr" ]]; then
+    STATUS=1
+else
+    STATUS=0
+fi
 
-exit [[ -s "$log_stderr" ]]
+# Clean up Logfile
+$RM -f "$log_stdout"
+$RM -f "$log_stderr"
+
+exit $STATUS
