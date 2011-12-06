@@ -36,19 +36,20 @@ MAILADDR="YOUR@EMAILADDRESS.COM"
 # ============================================================
 # === Paths to binary programs used by the script          ===
 #=============================================================
-PG_DUMP='/usr/bin/pg_dump'
-PSQL='/usr/bin/psql'
-GZIP='/bin/gzip'
-BZIP2='/bin/bzip2'
-RM='/bin/rm'
-MKDIR='/bin/mkdir'
-DATE='/bin/date'
-LN='/bin/ln'
-SED='/bin/sed'
-DU='/bin/du'
-GREP='/bin/grep'
-CAT='/bin/cat'
-MAILX='/usr/bin/mail'
+## Only set these if your versions can not be found in $PATH
+#PG_DUMP='/usr/bin/pg_dump'
+#PSQL='/usr/bin/psql'
+#GZIP='/bin/gzip'
+#BZIP2='/bin/bzip2'
+#RM='/bin/rm'
+#MKDIR='/bin/mkdir'
+#DATE='/bin/date'
+#LN='/bin/ln'
+#SED='/bin/sed'
+#DU='/bin/du'
+#GREP='/bin/grep'
+#CAT='/bin/cat'
+#MAILX='/usr/bin/mail'
 
 # ============================================================
 # === ADVANCED OPTIONS (Make sure to RTFM before changing) ===
