@@ -70,19 +70,19 @@ PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 [[ -z "$GZIP" ]]	&& GZIP=$(which gzip)
 [[ -z "$BZIP2" ]]	&& BZIP2=$(which bzip2)
 MISSING_BIN=''
-[[ -x "$PG_DUMP" ]]	|| MISSING_BIN="$MISSING_BIN pgdump not found: $PG_DUMP\n"
-[[ -x "$PSQL" ]]	|| MISSING_BIN="$MISSING_BIN psql not found: $PSQL\n"
-[[ -x "$RM" ]]		|| MISSING_BIN="$MISSING_BIN rm not found: $RM\n"
-[[ -x "$MKDIR" ]]	|| MISSING_BIN="$MISSING_BIN mkdir not found: $MKDIR\n"
-[[ -x "$DATE" ]]	|| MISSING_BIN="$MISSING_BIN date not found: $DATE\n"
-[[ -x "$LN" ]]		|| MISSING_BIN="$MISSING_BIN ln not found: $LN\n"
-[[ -x "$SED" ]]		|| MISSING_BIN="$MISSING_BIN sed not found: $SED\n"
-[[ -x "$DU" ]]		|| MISSING_BIN="$MISSING_BIN du not found: $DU\n"
-[[ -x "$GREP" ]]	|| MISSING_BIN="$MISSING_BIN grep not found: $GREP\n"
-[[ -x "$CAT" ]]		|| MISSING_BIN="$MISSING_BIN cat not found: $CAT\n"
-[[ -x "$MAILX" ]]	|| MISSING_BIN="$MISSING_BIN mail not found: $MAILX\n"
-[[ ! -x "$GZIP" && "$COMP" = 'gzip' ]]		&& MISSING_BIN="$MISSING_BIN gzip not found: $GZIP\n"
-[[ ! -x "$BZIP2" && "$COMP" = 'bzip2' ]]	&& MISSING_BIN="$MISSING_BIN bzip2 not found: $BZIP2\n"
+[[ -x "$PG_DUMP" ]]	|| MISSING_BIN="$MISSING_BIN 'pgdump' not found: $PG_DUMP\n"
+[[ -x "$PSQL" ]]	|| MISSING_BIN="$MISSING_BIN 'psql' not found: $PSQL\n"
+[[ -x "$RM" ]]		|| MISSING_BIN="$MISSING_BIN 'rm' not found: $RM\n"
+[[ -x "$MKDIR" ]]	|| MISSING_BIN="$MISSING_BIN 'mkdir' not found: $MKDIR\n"
+[[ -x "$DATE" ]]	|| MISSING_BIN="$MISSING_BIN 'date' not found: $DATE\n"
+[[ -x "$LN" ]]		|| MISSING_BIN="$MISSING_BIN 'ln' not found: $LN\n"
+[[ -x "$SED" ]]		|| MISSING_BIN="$MISSING_BIN 'sed' not found: $SED\n"
+[[ -x "$DU" ]]		|| MISSING_BIN="$MISSING_BIN 'du' not found: $DU\n"
+[[ -x "$GREP" ]]	|| MISSING_BIN="$MISSING_BIN 'grep' not found: $GREP\n"
+[[ -x "$CAT" ]]		|| MISSING_BIN="$MISSING_BIN 'cat' not found: $CAT\n"
+[[ -x "$MAILX" ]]	|| MISSING_BIN="$MISSING_BIN 'mail' not found: $MAILX\n"
+[[ ! -x "$GZIP" && "$COMP" = 'gzip' ]]		&& MISSING_BIN="$MISSING_BIN 'gzip' not found: $GZIP\n"
+[[ ! -x "$BZIP2" && "$COMP" = 'bzip2' ]]	&& MISSING_BIN="$MISSING_BIN 'bzip2' not found: $BZIP2\n"
 if [ -n "$MISSING_BIN" ] ; then
 	echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set."
 	echo "The missing files are:"
@@ -115,15 +115,15 @@ declare -r GREP
 declare -r CAT
 declare -r MAILX
 
-FULLDATE=`$DATE +%Y-%m-%d_%Hh%Mm`	# Datestamp e.g 2002-09-21
-DOW=`$DATE +%A`						# Day of the week e.g. Monday
-DNOW=`$DATE +%u`					# Day number of the week 1 to 7 where 1 represents Monday
-DOM=`$DATE +%d`						# Date of the Month e.g. 27
-M=`$DATE +%B`						# Month e.g January
-W=`$DATE +%V`						# Week Number e.g 37
-log_stdout=$BACKUPDIR/$DBHOST-`$DATE +%N`.log		# Logfile Name
-log_stderr=$BACKUPDIR/ERRORS_$DBHOST-`$DATE +%N`.log	# Logfile Name
-BACKUPFILES=""
+FULLDATE=$($DATE +%Y-%m-%d_%Hh%Mm)	# Datestamp e.g 2002-09-21_11h52m
+DOW=$($DATE +%A)					# Day of the week e.g. "Monday"
+DNOW=$($DATE +%u)					# Day number of the week 1 to 7 where 1 represents Monday
+DOM=$($DATE +%d)					# Date of the Month e.g. 27
+M=$($DATE +%B)						# Month e.g "January"
+W=$($DATE +%V)						# Week Number e.g 37
+log_stdout="$BACKUPDIR/$DBHOST-$($DATE +%N).log"		# Logfile Name
+log_stderr="$BACKUPDIR/ERRORS_$DBHOST-$($DATE +%N).log"	# Logfile Name
+backupfiles=""
 OPT="--blobs --format=${DUMPFORMAT}"			# OPT string for use with pg_dump
 
 # Create required directories
@@ -213,7 +213,7 @@ fi
 
 # Hostname for LOG information
 if [[ "$DBHOST" = "localhost" ]] ; then
-	HOST=`hostname`
+	HOST=$(hostname)
 	if [[ "$SOCKET" ]] ; then
 		OPT="$OPT --host=$SOCKET"
 	fi
@@ -224,11 +224,11 @@ fi
 # If backing up all DBs on the server
 if [[ "$DBNAMES" = "all" ]] ; then
 	export PGPASSWORD="$DB_PASS"
-	DBNAMES=`$PSQL --username=$USERNAME --dbname=$CONNECT_DB -P format=Unaligned -tqc 'SELECT datname FROM pg_database;' | $SED 's/ /%/g'`
+	DBNAMES=$($PSQL --username=$USERNAME --dbname=$CONNECT_DB -P format=Unaligned -tqc 'SELECT datname FROM pg_database;' | $SED 's/ /%/g')
 
 	# If DBs are excluded
 	for exclude in $DBEXCLUDE ; do
-		DBNAMES=`echo $DBNAMES | $SED "s/\b$exclude\b//g"`
+		DBNAMES=$(echo $DBNAMES | $SED "s/\b$exclude\b//g")
 	done
 
 	MDBNAMES=$DBNAMES
@@ -248,20 +248,20 @@ EOT
 # Monthly Full Backup of all Databases on the 1st of the month
 if [[ $DOM = "01" ]] ; then
 	for MDB in $MDBNAMES ; do
-		MDB="`echo $MDB | $SED 's/%/ /g'`"
+		MDB=$(echo $MDB | $SED 's/%/ /g')
 
 		echo Monthly Backup of $MDB...
 
 		[[ ! -e "$BACKUPDIR/monthly/$MDB" ]] && $MKDIR -p "$BACKUPDIR/monthly/$MDB"
 		dbdump "${MDB}" "${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
 		compression "${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
-		BACKUPFILES="${BACKUPFILES} ${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}${SUFFIX}"
+		backupfiles="${backupfiles} ${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}${SUFFIX}"
 		echo '----------------------------------------------------------------------'
 	done
 fi
 
 for DB in $DBNAMES ; do
-	DB="`echo $DB | $SED 's/%/ /g'`"
+	DB=$(echo $DB | $SED 's/%/ /g')
 
 	# Create Seperate directory for each DB
 	[[ ! -e "$BACKUPDIR/daily/$DB" ]]	&& $MKDIR -p "$BACKUPDIR/daily/$DB"
@@ -271,18 +271,18 @@ for DB in $DBNAMES ; do
 		# Weekly Backup
 		echo "Weekly Backup of Database '$DB'"
 		echo "Rotating 5 weeks Backups..."
-			if [ "$W" -le 05 ] ; then
-				REMW=`expr 48 + $W`
-			elif [ "$W" -lt 15 ];then
-				REMW=0`expr $W - 5`
+			if [ $W -le 05 ] ; then
+				REMW="$(expr 48 + $W)"
+			elif [ $W -lt 15 ];then
+				REMW="0$(expr $W - 5)"
 			else
-				REMW=`expr $W - 5`
+				REMW="$(expr $W - 5)"
 			fi
 		$RM -f $BACKUPDIR/weekly/$DB/${DB}_week.$REMW.*
 		echo
 		dbdump "$DB" "$BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
 		compression "$BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
-		BACKUPFILES="$BACKUPFILES $BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}$SUFFIX"
+		backupfiles="$backupfiles $BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}$SUFFIX"
 		echo '----------------------------------------------------------------------'
 	else
 		# Daily Backup
@@ -292,13 +292,13 @@ for DB in $DBNAMES ; do
 		echo
 		dbdump "$DB" "$BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
 		compression "$BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
-		BACKUPFILES="$BACKUPFILES $BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}$SUFFIX"
+		backupfiles="$backupfiles $BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}$SUFFIX"
 		echo '----------------------------------------------------------------------'
 	fi
 done
 
 $CAT <<EOT
-Backup End `$DATE`
+Backup End $($DATE)
 ======================================================================
 Total disk space used for backup storage..
 Size - Location
@@ -324,11 +324,11 @@ case "$MAILCONTENT" in
 'files')
 	if [[ -s "$log_stderr" ]] ; then
 		# Include error log if is larger than zero.
-		BACKUPFILES="$BACKUPFILES $log_stderr"
+		backupfiles="$backupfiles $log_stderr"
 		ERRORNOTE="WARNING: Error Reported - "
 	fi
 	# Get backup size
-	ATTSIZE=$($DU -c $BACKUPFILES | $GREP "[[:digit:][:space:]]total$" | $SED s/\s*total//)
+	ATTSIZE=$($DU -c $backupfiles | $GREP "[[:digit:][:space:]]total$" | $SED s/\s*total//)
 	if [[ $MAXATTSIZE -lt $ATTSIZE ]] ; then
 		$CAT "$log_stdout" | $MAILX -s "WARNING! - PostgreSQL Backup exceeds set maximum attachment size on $HOST - $FULLDATE" $MAILADDR
 	fi
