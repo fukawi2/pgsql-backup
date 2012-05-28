@@ -56,34 +56,34 @@ echo "Using configuration file '$rc_fname'"
 
 # Make sure our binaries are good
 PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-[[ -z "$PG_DUMP" ]]	&& PG_DUMP=$(which pg_dump)
-[[ -z "$PSQL" ]]	&& PSQL=$(which psql)
-[[ -z "$RM" ]]		&& RM=$(which rm)
-[[ -z "$MKDIR" ]]	&& MKDIR=$(which mkdir)
-[[ -z "$DATE" ]]	&& DATE=$(which date)
-[[ -z "$LN" ]]		&& LN=$(which ln)
-[[ -z "$SED" ]]		&& SED=$(which sed)
-[[ -z "$DU" ]]		&& DU=$(which du)
-[[ -z "$GREP" ]]	&& GREP=$(which grep)
-[[ -z "$CAT" ]]		&& CAT=$(which cat)
-[[ -z "$MAILX" ]]	&& MAILX=$(which mail)
-[[ -z "$GZIP" ]]	&& GZIP=$(which gzip)
-[[ -z "$BZIP2" ]]	&& BZIP2=$(which bzip2)
+[[ -z "$PG_DUMP" ]]	&& PG_DUMP=$(which pg_dump 2> /dev/null)
+[[ -z "$PSQL" ]]	&& PSQL=$(which psql 2> /dev/null)
+[[ -z "$RM" ]]		&& RM=$(which rm 2> /dev/null)
+[[ -z "$MKDIR" ]]	&& MKDIR=$(which mkdir 2> /dev/null)
+[[ -z "$DATE" ]]	&& DATE=$(which date 2> /dev/null)
+[[ -z "$LN" ]]		&& LN=$(which ln 2> /dev/null)
+[[ -z "$SED" ]]		&& SED=$(which sed 2> /dev/null)
+[[ -z "$DU" ]]		&& DU=$(which du 2> /dev/null)
+[[ -z "$GREP" ]]	&& GREP=$(which grep 2> /dev/null)
+[[ -z "$CAT" ]]		&& CAT=$(which cat 2> /dev/null)
+[[ -z "$MAILX" ]]	&& MAILX=$(which mail 2> /dev/null)
+[[ -z "$GZIP" ]]	&& GZIP=$(which gzip 2> /dev/null)
+[[ -z "$BZIP2" ]]	&& BZIP2=$(which bzip2 2> /dev/null)
 MISSING_BIN=''
-[[ -x "$PG_DUMP" ]]	|| MISSING_BIN="$MISSING_BIN 'pgdump' not found: $PG_DUMP\n"
-[[ -x "$PSQL" ]]	|| MISSING_BIN="$MISSING_BIN 'psql' not found: $PSQL\n"
-[[ -x "$RM" ]]		|| MISSING_BIN="$MISSING_BIN 'rm' not found: $RM\n"
-[[ -x "$MKDIR" ]]	|| MISSING_BIN="$MISSING_BIN 'mkdir' not found: $MKDIR\n"
-[[ -x "$DATE" ]]	|| MISSING_BIN="$MISSING_BIN 'date' not found: $DATE\n"
-[[ -x "$LN" ]]		|| MISSING_BIN="$MISSING_BIN 'ln' not found: $LN\n"
-[[ -x "$SED" ]]		|| MISSING_BIN="$MISSING_BIN 'sed' not found: $SED\n"
-[[ -x "$DU" ]]		|| MISSING_BIN="$MISSING_BIN 'du' not found: $DU\n"
-[[ -x "$GREP" ]]	|| MISSING_BIN="$MISSING_BIN 'grep' not found: $GREP\n"
-[[ -x "$CAT" ]]		|| MISSING_BIN="$MISSING_BIN 'cat' not found: $CAT\n"
-[[ -x "$MAILX" ]]	|| MISSING_BIN="$MISSING_BIN 'mail' not found: $MAILX\n"
+[[ -x "$PG_DUMP" ]] || MISSING_BIN="$MISSING_BIN \t'pgdump' not found: $PG_DUMP\n"
+[[ -x "$PSQL" ]]	  || MISSING_BIN="$MISSING_BIN \t'psql' not found: $PSQL\n"
+[[ -x "$RM" ]]		  || MISSING_BIN="$MISSING_BIN \t'rm' not found: $RM\n"
+[[ -x "$MKDIR" ]]	  || MISSING_BIN="$MISSING_BIN \t'mkdir' not found: $MKDIR\n"
+[[ -x "$DATE" ]]	  || MISSING_BIN="$MISSING_BIN \t'date' not found: $DATE\n"
+[[ -x "$LN" ]]		  || MISSING_BIN="$MISSING_BIN \t'ln' not found: $LN\n"
+[[ -x "$SED" ]]		  || MISSING_BIN="$MISSING_BIN \t'sed' not found: $SED\n"
+[[ -x "$DU" ]]		  || MISSING_BIN="$MISSING_BIN \t'du' not found: $DU\n"
+[[ -x "$GREP" ]]	  || MISSING_BIN="$MISSING_BIN \t'grep' not found: $GREP\n"
+[[ -x "$CAT" ]]		  || MISSING_BIN="$MISSING_BIN \t'cat' not found: $CAT\n"
+[[ -x "$MAILX" ]]	  || MISSING_BIN="$MISSING_BIN \t'mail' not found: $MAILX\n"
 [[ ! -x "$GZIP" && "$COMP" = 'gzip' ]]		&& MISSING_BIN="$MISSING_BIN 'gzip' not found: $GZIP\n"
 [[ ! -x "$BZIP2" && "$COMP" = 'bzip2' ]]	&& MISSING_BIN="$MISSING_BIN 'bzip2' not found: $BZIP2\n"
-if [ -n "$MISSING_BIN" ] ; then
+if [[ -n "$MISSING_BIN" ]] ; then
 	echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set."
 	echo "The missing files are:"
 	echo -e $MISSING_BIN
