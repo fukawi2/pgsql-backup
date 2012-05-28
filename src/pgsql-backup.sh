@@ -90,8 +90,10 @@ if [[ -n "$MISSING_BIN" ]] ; then
 fi
 
 # Make all config from options.conf READ-ONLY
-declare -r USERNAME
-declare -r DBHOST
+declare -r PGUSER
+declare -r PGPASSWORD
+declare -r PGHOST
+declare -r PGPORT
 declare -r BACKUPDIR
 declare -r MAILCONTENT
 declare -r MAXATTSIZE
@@ -114,6 +116,9 @@ declare -r DU
 declare -r GREP
 declare -r CAT
 declare -r MAILX
+
+# export PG environment variables for libpq
+export PGUSER PGPASSWORD PGHOST PGPORT PGDATABASE
 
 FULLDATE=$($DATE +%Y-%m-%d_%Hh%Mm)	# Datestamp e.g 2002-09-21_11h52m
 DOW=$($DATE +%A)					# Day of the week e.g. "Monday"
@@ -162,8 +167,7 @@ exec 2> $log_stderr     # stderr replaced with file $log_stderr.
 dbdump () {
 	local _args="$1"
 	local _output_fname="$2"
-	export PGPASSWORD="$DB_PASS"
-	$PG_DUMP --username=$USERNAME --host=$DBHOST $OPT $_args > $_output_fname
+	$PG_DUMP $OPT $_args > $_output_fname
 	return $?
 }
 
@@ -223,8 +227,7 @@ fi
 
 # If backing up all DBs on the server
 if [[ "$DBNAMES" = "all" ]] ; then
-	export PGPASSWORD="$DB_PASS"
-	DBNAMES=$($PSQL --username=$USERNAME --dbname=$CONNECT_DB -P format=Unaligned -tqc 'SELECT datname FROM pg_database;' | $SED 's/ /%/g')
+	DBNAMES=$($PSQL -P format=Unaligned -tqc 'SELECT datname FROM pg_database;' | $SED 's/ /%/g')
 
 	# If DBs are excluded
 	for exclude in $DBEXCLUDE ; do
