@@ -1,0 +1,153 @@
+=head1 NAME
+
+pgsql-backup - basic automated backup script for PostgreSQL
+
+=head1 SYNOPSIS
+
+pgsql-backup [/path/to/pgsql-backup.conf]
+
+Without options, the script will attempt to locate a configuration file in
+several locations:
+
+=over 4
+
+=item C<~/.pgsql-backup> (user-specific)
+
+=item C</etc/pgsql-backup.conf> (system-wide config)
+
+=item C</etc/pgsql-backup/options.conf> (legacy)
+
+=back
+
+The last location above is a legacy location and should not be used. Existing
+users should relocate /etc/pgsql-backup/options.conf to /etc/pgsql-backup.conf
+
+=head1 DESCRIPTION
+
+This script is designed to be ran daily, but can be run more often. Rolling
+daily, weekly and monthly backups are created in the specified location for
+each database requested to be backed up. Backups can be optionally compressed
+to save diskspace. Backups can also be optionally emailed as attachments.
+
+=head1 OPTIONS
+
+Only a single argument is accepted on the command line: a specific path to a
+configuration file. Example:
+
+  pgsql-backup /var/lib/pgsql/pgsql-backup.conf
+
+=head1 CONFIGURATION
+
+TODO
+
+Please refer to: L<http://fukawi2.nl/index.php/code/code-pgsql-backup>
+
+=head1 SERVER PERMISSIONS
+
+The PostgreSQL user that is doing the backup (not the system user) should
+ideally be a dedicated user:
+
+In a shell:
+  $ createuser -D -i -l -P -R -s dumper
+
+SQL Commands:
+  CREATE ROLE dumper LOGIN SUPERUSER INHERIT;
+  ALTER ROLE dumper WITH PASSWORD SuperSecretPassword;
+
+=item Creating a dedicated backup user is beneficial for a couple of reasons:
+
+=over 4
+
+=item 1. Distribution of the credentials is limited to the location(s) that
+need to handle backups.
+
+=item 2. If the credentials are compromised, they can be revoked without
+affecting things other than backups.
+
+=back
+
+=head1 HOOKS
+
+The script has 2 hooks available for you to incorporate custom actions.
+
+=head2 PREBACKUP
+
+TODO
+
+=head2 POSTBACKUP
+
+TODO
+
+The command specified in POSTBACKUP will be executed after the dumps are
+complete, with the names of the dumps as arguments.
+
+Your POSTBACKUP script should print the new names of altered files on stdout
+if it alters the names.
+
+A sample hook is included: F<hook-postbackup.sh>
+
+=head1 SECURITY
+
+Database dumps created by this script are unencrypted plain text; you should
+take into consideration the following (incomplete list) of implications,
+especially if your database(s) store sensitive information such as usernames,
+passwords, credit card details or other personal information (espeically those
+of your customers).
+
+=over 4
+
+=item * When writing to disk, ensure the backup directory has restictive
+permissions to prevent unauthorized users gaining access to the backups.
+
+=item * Use the L</POSTBACKUP> hook to encrypt your backups.
+
+=item * When emailing backup dumps, avoid the emails being trasmitted over
+untrusted networks (ie, the internet). Internal mail systems only. Be aware
+of mail systems that archive emails may retain copies of your backups.
+
+=item * If you don't administer the email server, please respect your email
+admin and don't email 2gb database backups to yourself each night ;)
+
+=back
+
+=head1 BUGS
+
+=head2 Reporting Bugs
+
+Email bug reports to L<fukawi2@gmail.com|mailto://fukawi2@gmail.com>
+
+=head2 Known Bugs
+
+=over 4
+
+=item * Technically not a bug, but PostgreSQL configuration files (eg,
+postgres.conf and pg_hba.conf) are NOT backed up by this utility. These files
+should be backup up separately. They are not handled by this script because
+the script is designed to be able to backup a remote server by connecting
+directly to the PostgreSQL server as a client. When connected in this manner,
+it is impossible to ask the server to send it's configuration files.
+
+=head1 ACKNOWLEDGEMENTS
+
+This script is a fork of "MySQL Backup Script" version 2.5 Copyright (c)
+2002-2003 wipe_out@lycos.co.u kavailable from:
+L<http://sourceforge.net/projects/automysqlbackup/>
+
+=head1 LICENSE
+
+Copyright 2010-2012 Phillip Smith
+
+Made available under the conditions of the GPLv2. This is free software; refer
+to the F<LICENSE> file for details.
+
+=head1 AVAILABILITY
+
+L<http://fukawi2.nl/index.php/code/code-pgsql-backup>
+
+L<https://github.com/fukawi2/pgsql-backup>
+
+=head1 AUTHOR
+
+Phillip Smith aka fukawi2
+
+=cut
