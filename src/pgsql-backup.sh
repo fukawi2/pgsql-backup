@@ -38,14 +38,8 @@ else
 fi
 
 # Load the configuration file
-if [[ -r "$rc_fname" ]] ; then
-  source $rc_fname || { echo "Error while reading configuration file: $rc_fname"; exit 1; }
-else
-  echo "Unable to read configuration file: $rc_fname"
-  exit 1
-fi
-
-echo "Using configuration file '$rc_fname'"
+[[ ! -r "$rc_fname" ]] && { echo "Unable to read configuration file: $rc_fname; Permission Denied"; exit 1; }
+source $rc_fname || { echo "Error reading configuration file: $rc_fname"; exit 1; }
 
 # Validate the configuration
 [[ -z "$MAILADDR" ]]    && MAILADDR='root@localhost'
