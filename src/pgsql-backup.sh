@@ -308,7 +308,8 @@ if [[ -n "$POSTBACKUP" ]] ; then
   echo ======================================================================
   echo "Postbackup command output."
   echo
-  eval $POSTBACKUP
+  new_backupfiles=$($POSTBACKUP $backupfiles)
+  [[ -n "$new_backupfiles" ]] && backupfiles=$new_backupfiles
   echo
   echo ======================================================================
 fi
