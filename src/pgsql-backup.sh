@@ -20,7 +20,7 @@
 #
 
 # Version Number
-VER=0.9.7
+VER=0.9.8
 
 # Path to options file
 user_rc="$1"
