@@ -20,7 +20,7 @@
 #
 
 # Version Number
-VER=0.9.8
+VER=0.9.9
 
 # Path to options file
 user_rc="$1"
@@ -181,8 +181,14 @@ compression () {
     echo Compression information for "$_fname.bz2"
     $BZIP2 -f -v $_fname 2>&1
     SUFFIX=".bz2"
+  elif [[ "$COMP" = "none" ]] && [[ "$DUMPFORMAT" = "custom" ]] ; then
+    # the 'custom' dump format compresses by default inside pg_dump if postgres
+    # was built with zlib at compile time.
+    echo "Using in-built compression of 'custom' format (if available)"
+  elif [[ "$COMP" = "none" ]] ; then
+    echo "Using no compression"
   else
-    echo "No compression option set, check advanced settings"
+    echo "No valid compression option set, check advanced settings"
   fi
   if [[ "$LATEST" = "yes" ]] ; then
     $LN -f ${_fname}${SUFFIX} "$BACKUPDIR/latest/"
