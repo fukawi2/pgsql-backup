@@ -139,10 +139,12 @@ if [[ "$DUMPFORMAT" = 'tar' ]] ; then
   OUTEXT='tar'
 elif [[ "$DUMPFORMAT" = 'plain' ]] ; then
   OUTEXT='sql'
+elif [[ "$DUMPFORMAT" = 'custom' ]] ; then
+  OUTEXT='c'
 else
-  echo "Invalid output format configured. Defaulting to 'plain'"
-  DUMPFORMAT='plain'
-  OUTEXT='sql'
+  echo "Invalid output format configured. Defaulting to 'custom'"
+  DUMPFORMAT='custom'
+  OUTEXT='c'
 fi
 OPT="$OPT --format=${DUMPFORMAT}"
 
