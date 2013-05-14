@@ -222,12 +222,10 @@ else
   OPT="$OPT --create"
 fi
 
-# Hostname for LOG information
+# Hostname for LOG information; also append socket to
 if [[ "$DBHOST" = "localhost" ]] ; then
-  HOST=$(hostname)
-  if [[ "$SOCKET" ]] ; then
-    OPT="$OPT --host=$SOCKET"
-  fi
+  HOST="$hostname"
+  [[ "$SOCKET" ]] && OPT="$OPT --host=$SOCKET"
 else
   HOST=$DBHOST
 fi
