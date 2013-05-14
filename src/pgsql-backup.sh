@@ -126,8 +126,6 @@ DNOW=$($DATE +%u)                   # Day number of the week 1 to 7 where 1 repr
 DOM=$($DATE +%d)                    # Date of the Month e.g. 27
 M=$($DATE +%B)                      # Month e.g "January"
 W=$($DATE +%V)                      # Week Number e.g 37
-log_stdout="$BACKUPDIR/$DBHOST-$($DATE +%N).log"        # Logfile Name
-log_stderr="$BACKUPDIR/ERRORS_$DBHOST-$($DATE +%N).log" # Logfile Name
 backupfiles=""
 OPT="--blobs --format=${DUMPFORMAT}"  # OPT string for use with pg_dump
 
@@ -148,13 +146,15 @@ elif [[ "$DUMPFORMAT" = 'plain' ]] ; then
 elif [[ "$DUMPFORMAT" = 'custom' ]] ; then
   OUTEXT='c'
 else
-  echo "Invalid output format configured. Defaulting to 'custom'"
+  echo "Invalid output format configured. Defaulting to 'custom'" >&2
   DUMPFORMAT='custom'
   OUTEXT='c'
 fi
 OPT="$OPT --format=${DUMPFORMAT}"
 
 # IO redirection for logging.
+log_stdout=$(mktemp "$BACKUPDIR/$DBHOST-$$-log.XXXX") # Logfile Name
+log_stderr=$(mktemp "$BACKUPDIR/$DBHOST-$$-err.XXXX") # Error Logfile Name
 touch $log_stdout
 exec 6>&1           # Link file descriptor #6 with stdout.
 exec > $log_stdout  # stdout replaced with file $log_stdout.
