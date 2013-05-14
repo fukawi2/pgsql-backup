@@ -48,11 +48,11 @@ fi
 source $rc_fname || { echo "Error reading configuration file: $rc_fname" >&2; exit 2; }
 
 # Validate the configuration
-[[ -z "$MAILADDR" ]]    && MAILADDR='root@localhost'  # where to send reports to
-[[ -z "$DBHOST" ]]      && DBHOST='localhost'         # database server to connect to
-[[ -z "$DBNAMES" ]]     && DBNAMES='all'              # database names to backup
-[[ -z "$MAILCONTENT" ]] && MAILCONTENT='stdout'       # where to display output
-[[ -z "$MAXATTSIZE" ]]  && MAXATTSIZE='4096'          # maximum email attachment size
+MAILADDR=${MAILADDR-root@localhost}   # where to send reports to
+DBHOST=${DBHOST-localhost}            # database server to connect to
+DBNAMES=${DBNAMES-all}                # database names to backup
+MAILCONTENT=${MAILCONTENT-stdout}     # where to display output
+MAXATTSIZE=${MAXATTSIZE-4096}         # maximum email attachment size
 
 # Make sure our binaries are good
 PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
