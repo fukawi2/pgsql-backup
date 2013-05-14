@@ -14,9 +14,10 @@ D_CNF=/etc
 
 all: install
 
-install: test bin config
+install: test bin config docs
 	# install the actual scripts
 	install -D -m 0755 src/$(PROJECT).sh $(DESTDIR)$(D_BIN)/$(PROJECT)
+	install -D -m 0644 $(PROJECT).1.man $(DESTDIR)$(D_MAN)/man1/$(PROJECT).1p
 
 test:
 	@echo "==> Checking for required external dependencies"
@@ -38,6 +39,11 @@ config: $(PROJECT).conf
 	[[ -e $(DESTDIR)$(D_CNF)/$(PROJECT).conf ]] || \
 		install -D -m 0644 $(PROJECT).conf $(DESTDIR)$(D_CNF)/$(PROJECT).conf
 
+docs: $(PROJECT).pod
+	# build man pages
+	pod2man --name=$(PROJECT) $(PROJECT).pod $(PROJECT).1.man
+
 uninstall:
 	rm -f $(DESTDIR)$(D_BIN)/$(PROJECT)
+	rm -f $(DESTDIR)$(D_MAN)/man1/$(PROJECT).1p
 	@echo "Leaving '$(DESTDIR)$(D_CNF)/$(PROJECT).conf' untouched"
