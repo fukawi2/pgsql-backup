@@ -230,8 +230,6 @@ if [[ "$DBNAMES" = "all" ]] ; then
   for exclude in $DBEXCLUDE ; do
     DBNAMES=$(echo $DBNAMES | sed "s/\b$exclude\b//g")
   done
-
-  MDBNAMES=$DBNAMES
 fi
 
 cat <<EOT
@@ -245,39 +243,33 @@ Started $(date)
 ======================================================================
 EOT
 
-# Monthly Full Backup of all Databases on the 1st of the month
-if [[ $DOM = "01" ]] ; then
-  for MDB in $MDBNAMES ; do
-    MDB=$(echo $MDB | sed 's/%/ /g')
-
-    echo Monthly Backup of $MDB...
-
-    [[ ! -e "$BACKUPDIR/monthly/$MDB" ]] && mkdir -p "$BACKUPDIR/monthly/$MDB"
-    dbdump "${MDB}" "${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
-    compression "${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
-    backupfiles="${backupfiles} ${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}${SUFFIX}"
-    echo '----------------------------------------------------------------------'
-  done
-fi
-
 for DB in $DBNAMES ; do
   DB=$(echo $DB | sed 's/%/ /g')
 
   # Create Seperate directory for each DB
-  [[ ! -e "$BACKUPDIR/daily/$DB" ]]   && mkdir -p "$BACKUPDIR/daily/$DB"
-  [[ ! -e "$BACKUPDIR/weekly/$DB" ]]  && mkdir -p "$BACKUPDIR/weekly/$DB"
+  [[ ! -e "$BACKUPDIR/monthly/$MDB" ]]  && mkdir -p "$BACKUPDIR/monthly/$MDB"
+  [[ ! -e "$BACKUPDIR/weekly/$DB" ]]    && mkdir -p "$BACKUPDIR/weekly/$DB"
+  [[ ! -e "$BACKUPDIR/daily/$DB" ]]     && mkdir -p "$BACKUPDIR/daily/$DB"
 
-  if [[ $DNOW = $DOWEEKLY ]] ; then
+  if [[ $DOM = "01" ]] ; then
+    # Monthly Backup
+    echo Monthly Backup of $MDB...
+    # note we never automatically delete old monthly backups
+    dbdump "${MDB}" "${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
+    compression "${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
+    backupfiles="${backupfiles} ${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}${SUFFIX}"
+    echo '----------------------------------------------------------------------'
+  elif [[ $DNOW = $DOWEEKLY ]] ; then
     # Weekly Backup
     echo "Weekly Backup of Database '$DB'"
     echo "Rotating 5 weeks Backups..."
-      if [ $W -le 05 ] ; then
-        REMW="$(expr 48 + $W)"
-      elif [ $W -lt 15 ];then
-        REMW="0$(expr $W - 5)"
-      else
-        REMW="$(expr $W - 5)"
-      fi
+    if [ $W -le 05 ] ; then
+      REMW="$(expr 48 + $W)"
+    elif [ $W -lt 15 ];then
+      REMW="0$(expr $W - 5)"
+    else
+      REMW="$(expr $W - 5)"
+    fi
     rm -f $BACKUPDIR/weekly/$DB/${DB}_week.$REMW.*
     echo
     dbdump "$DB" "$BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
