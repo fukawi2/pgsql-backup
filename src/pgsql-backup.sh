@@ -215,12 +215,11 @@ if [[ -n "$PREBACKUP" ]] ; then
   echo
 fi
 
-if [[ "$SEPDIR" = "yes" ]] ; then # Check if CREATE DATABSE should be included in Dump
-  if [[ "$CREATE_DATABASE" = "no" ]] ; then
-    OPT="$OPT --no-create"
-  else
-    OPT="$OPT --create"
-  fi
+# ask pg_dump to include CREATE DATABASE in the dump output?
+if [[ "$CREATE_DATABASE" = "no" ]] ; then
+  OPT="$OPT --no-create"
+else
+  OPT="$OPT --create"
 fi
 
 # Hostname for LOG information
