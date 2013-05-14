@@ -22,6 +22,12 @@
 # Version Number
 VER=0.9.9
 
+### EXIT CODES
+# 0 = OK
+# 1 = Unspecified Error
+# 2 = Configuration File Error
+# 3 = Permission Denied
+
 # Path to options file
 user_rc="$1"
 if [[ -n "$user_rc" && -f "$user_rc" ]] ; then
@@ -33,13 +39,13 @@ elif [[ -f '/etc/pgsql-backup.conf' ]] ; then
 elif [[ -f '/etc/pgsql-backup/options.conf' ]] ; then
   rc_fname='/etc/pgsql-backup/options.conf'
 else
-  echo 'Configuration file not found!'
-  exit 1
+  echo 'Configuration file not found!' >&2
+  exit 2
 fi
 
 # Load the configuration file
-[[ ! -r "$rc_fname" ]] && { echo "Unable to read configuration file: $rc_fname; Permission Denied"; exit 1; }
-source $rc_fname || { echo "Error reading configuration file: $rc_fname"; exit 1; }
+[[ ! -r "$rc_fname" ]] && { echo "Unable to read configuration file: $rc_fname; Permission Denied" >&2; exit 3; }
+source $rc_fname || { echo "Error reading configuration file: $rc_fname" >&2; exit 2; }
 
 # Validate the configuration
 [[ -z "$MAILADDR" ]]    && MAILADDR='root@localhost'  # where to send reports to
@@ -78,9 +84,9 @@ MISSING_BIN=''
 [[ ! -x "$GZIP" && "$COMP" = 'gzip' ]]    && MISSING_BIN="$MISSING_BIN 'gzip' not found: $GZIP\n"
 [[ ! -x "$BZIP2" && "$COMP" = 'bzip2' ]]  && MISSING_BIN="$MISSING_BIN 'bzip2' not found: $BZIP2\n"
 if [[ -n "$MISSING_BIN" ]] ; then
-  echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set."
-  echo "The missing files are:"
-  echo -e $MISSING_BIN
+  echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set." >&2
+  echo "The missing files are:" >&2
+  echo -e $MISSING_BIN >&2
 fi
 
 # Make all config from options.conf READ-ONLY
