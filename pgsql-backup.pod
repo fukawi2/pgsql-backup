@@ -38,9 +38,196 @@ configuration file. Example:
 
 =head1 CONFIGURATION
 
-TODO
+The following configuration options exist in C<pgsql-backup.conf>.
 
-Please refer to: L<http://fukawi2.nl/index.php/code/code-pgsql-backup>
+=head2 PGUSER
+
+The username to connect to the PostgreSQL daemon as. This is the PostgreSQL
+username, not the system username.
+
+Type:     String
+
+Default:  postgres
+
+=head2 PGPASSWORD
+
+The password required for the username specified above.
+
+Type:     String
+
+Default:  
+
+=head2 PPGHOST
+
+The hostname or IP Address of the machine running the PostgreSQL daemon you
+wish to backup. If the script is running on the same machine as the daemon,
+use C<localhost>
+
+Type:     String
+
+Default:  localhost
+
+=head2 PGDATABASE
+
+The dump process needs an initial database to connect to when dumping. You can
+generally leave this as C<postgres>, C<template1> or C<template0> unless you
+have deleted those databases. Any database that exists and the user specified
+in PGUSER can connect to is OK. No changes will be made to the database you use
+
+Type:     String
+
+Default:  postgres
+
+=head2 DBNAMES
+
+Space-separated list of databases to include in the backup. Special keyword
+C<all> selects all databases the exist at run time. Each database will be
+backed up to it's own file.
+
+Type:     String
+
+Default:  all
+
+=head2 BACKUPDIR
+
+The destination for your backup (ie, where to store your backups). Use an
+absolute path to avoid issues with environment changes, especially when using
+cron to automate your backups. The path specified here must exist before the
+first backup is run. Any missing subdirectories will be created as required.
+
+Type:     String
+
+Default:  None
+
+=head2 MAILCONTENT 
+
+How to handle the output of the script:
+
+=over 4
+
+=item C<log> = always email the log file to the address in MAILADDR
+
+=item C<stdout> = print the log to stdout. This may still get emailed to you
+if you are running the script from cron.
+
+=item C<quiet> = only email if there is a problem.
+
+=back
+
+Type:     C<log> or C<stdout> or C<quiet>
+
+Default:  stdout
+
+=head2 MAXATTSIZE
+
+Maximum size of log files to attach to e-mail in bytes. Don't forget the
+account for the overhead of the rest of the e-mail if you have maximum limits
+on e-mail sizes. This is only the attachment limit.
+
+Type:     String
+
+Default:  4000
+
+=head2 MAILADDR
+
+Email address to send reports to according to MAILCONTENT
+
+Type:     String
+
+Default:  root@localhost
+
+=head2 DBEXCLUDE
+
+Space-separated list of databases to always exclude from the backup. Useful if
+you are using the C<all> setting for DBNAMES but want to exclude some specific
+databases.
+
+Type:     String
+
+Default:  
+
+=head2 CREATE_DATABASE
+
+Include a CREATE DATABASE statement in the dumped output. If set to C<yes> then
+pg_dump is called with with C<--create> flag.
+
+Type:     C<yes> or C<no>
+
+Default:  yes
+
+=head2 DOWEEKLY
+
+Which day to create a weekly archive of the dumps. Use '0' to not do weekly
+archives. Valid values are 1 to 7 to indicate which day to create the weekly
+archive on, with 1 being Monday.
+
+Type:     0 to 7
+
+Default:  1
+
+=head2 COMP
+
+Compression type to use for the backup. Database dumps can take a lot of room,
+but usually tend to compress very well.
+
+Type:     C<gzip> or C<bzip2> or C<xz> or C<none>
+
+Default:  bzip2
+
+=head2 LATEST
+
+If set to '1' the script will create a directory in BACKUPDIR called C<latest>
+and hard-link to the latest dump of each database. This provides a static path
+to the latest backup for scripting restores, copies, Nagios file check etc.
+Note that not all filesystems support hard-links, so if you are using a
+filesystem that doesn't such as NTFS or FAT then you will need to disable this
+option.
+
+Type:     C<1> or C<0>
+
+Default:  1
+
+=head2 SOCKET
+
+If you need to connect to the database via a Unix socket, specify it here. If
+this option is set non-empty, it will override the DBHOST setting.
+
+Type:     String
+
+Default:  
+
+=head2 DUMPFORMAT
+
+Format of the database dump to pass to the 'pg_dump' utility. Using C<custom>
+is the most flexible format according to PostgreSQL developers.
+
+B<NOTE:> using the C<tar> format requires sufficient temporary disk space
+(usually in /tmp) to dump an intermediatary copy of each database as part of
+the conversion to tar.
+
+Refer to L<pg_dump(1)> for more information on the 3 options.
+
+Type:     C<custom> or C<tar> or C<plain>
+
+Default:  custom
+
+=head2 PREBACKUP
+
+Optional. A command to execute before the backup starts. eg, a database
+cleanup script. See L</HOOKS> below.
+
+Type:     String
+
+Default:
+
+=head2 POSTBACKUP
+
+Optional. A command to execute after the backup is complete. eg, a scipt to
+copy the output files to another server. See L</HOOKS> below.
+
+Type:     String
+
+Default:
 
 =head1 SERVER PERMISSIONS
 
@@ -54,7 +241,7 @@ SQL Commands:
   CREATE ROLE dumper LOGIN SUPERUSER INHERIT;
   ALTER ROLE dumper WITH PASSWORD SuperSecretPassword;
 
-=item Creating a dedicated backup user is beneficial for a couple of reasons:
+Creating a dedicated backup user is beneficial for a couple of reasons:
 
 =over 4
 
@@ -68,15 +255,8 @@ affecting things other than backups.
 
 =head1 HOOKS
 
-The script has 2 hooks available for you to incorporate custom actions.
-
-=head2 PREBACKUP
-
-TODO
-
-=head2 POSTBACKUP
-
-TODO
+The script has 2 hooks available for you to incorporate custom actions: 
+C<PREBACKUP> and C<POSTBACKUP>
 
 The command specified in POSTBACKUP will be executed after the dumps are
 complete, with the names of the dumps as arguments.
@@ -88,11 +268,11 @@ A sample hook is included: F<hook-postbackup.sh>
 
 =head1 SECURITY
 
-Database dumps created by this script are unencrypted plain text; you should
-take into consideration the following (incomplete list) of implications,
-especially if your database(s) store sensitive information such as usernames,
-passwords, credit card details or other personal information (espeically those
-of your customers).
+Database dumps created by this script are unencrypted; you should take into
+consideration the following (incomplete list) of implications, especially if
+your database(s) store sensitive information such as usernames, passwords,
+credit card details or other personal information (espeically those of your
+customers).
 
 =over 4
 
@@ -127,6 +307,8 @@ the script is designed to be able to backup a remote server by connecting
 directly to the PostgreSQL server as a client. When connected in this manner,
 it is impossible to ask the server to send it's configuration files.
 
+=back
+
 =head1 ACKNOWLEDGEMENTS
 
 This script is a fork of "MySQL Backup Script" version 2.5 Copyright (c)
@@ -135,14 +317,12 @@ L<http://sourceforge.net/projects/automysqlbackup/>
 
 =head1 LICENSE
 
-Copyright 2010-2012 Phillip Smith
+Copyright 2010-2013 Phillip Smith
 
 Made available under the conditions of the GPLv2. This is free software; refer
 to the F<LICENSE> file for details.
 
 =head1 AVAILABILITY
-
-L<http://fukawi2.nl/index.php/code/code-pgsql-backup>
 
 L<https://github.com/fukawi2/pgsql-backup>
 
