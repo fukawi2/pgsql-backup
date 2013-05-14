@@ -166,14 +166,19 @@ compression () {
   local _fname="$1"
 
   if [[ "$COMP" = "gzip" ]] ; then
-    echo Backup Information for "$_fname"
-    $GZIP -f "$_fname"
-    $GZIP -l "$_fname.gz"
     SUFFIX=".gz"
+    echo Backup Information for "${_fname}${SUFFIX}"
+    $GZIP -f "$_fname"
+    $GZIP -l "${_fname}${SUFFIX}"
   elif [[ "$COMP" = "bzip2" ]] ; then
-    echo Compression information for "$_fname.bz2"
-    $BZIP2 -f -v $_fname 2>&1
     SUFFIX=".bz2"
+    echo Compression information for "${_fname}${SUFFIX}"
+    $BZIP2 -f -v $_fname 2>&1
+  elif [[ "$COMP" = "xz" ]] ; then
+    SUFFIX=".xz"
+    echo Compression information for "${_fname}${SUFFIX}"
+    $XZ --compress --force $_fname 2>&1
+    $XZ--list ${_fname}${SUFFIX} 2>&1
   elif [[ "$COMP" = "none" ]] && [[ "$DUMPFORMAT" = "custom" ]] ; then
     # the 'custom' dump format compresses by default inside pg_dump if postgres
     # was built with zlib at compile time.
