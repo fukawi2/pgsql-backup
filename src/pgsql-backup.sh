@@ -58,28 +58,12 @@ MAXATTSIZE=${MAXATTSIZE-4096}         # maximum email attachment size
 PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 [[ -z "$PG_DUMP" ]] && PG_DUMP=$(which pg_dump 2> /dev/null)
 [[ -z "$PSQL" ]]    && PSQL=$(which psql 2> /dev/null)
-[[ -z "$RM" ]]      && RM=$(which rm 2> /dev/null)
-[[ -z "$MKDIR" ]]   && MKDIR=$(which mkdir 2> /dev/null)
-[[ -z "$DATE" ]]    && DATE=$(which date 2> /dev/null)
-[[ -z "$LN" ]]      && LN=$(which ln 2> /dev/null)
-[[ -z "$SED" ]]     && SED=$(which sed 2> /dev/null)
-[[ -z "$DU" ]]      && DU=$(which du 2> /dev/null)
-[[ -z "$GREP" ]]    && GREP=$(which grep 2> /dev/null)
-[[ -z "$CAT" ]]     && CAT=$(which cat 2> /dev/null)
 [[ -z "$MAILX" ]]   && MAILX=$(which mail 2> /dev/null)
 [[ -z "$GZIP" ]]    && GZIP=$(which gzip 2> /dev/null)
 [[ -z "$BZIP2" ]]   && BZIP2=$(which bzip2 2> /dev/null)
 MISSING_BIN=''
 [[ -x "$PG_DUMP" ]] || MISSING_BIN="$MISSING_BIN \t'pgdump' not found: $PG_DUMP\n"
 [[ -x "$PSQL" ]]    || MISSING_BIN="$MISSING_BIN \t'psql' not found: $PSQL\n"
-[[ -x "$RM" ]]      || MISSING_BIN="$MISSING_BIN \t'rm' not found: $RM\n"
-[[ -x "$MKDIR" ]]   || MISSING_BIN="$MISSING_BIN \t'mkdir' not found: $MKDIR\n"
-[[ -x "$DATE" ]]    || MISSING_BIN="$MISSING_BIN \t'date' not found: $DATE\n"
-[[ -x "$LN" ]]      || MISSING_BIN="$MISSING_BIN \t'ln' not found: $LN\n"
-[[ -x "$SED" ]]     || MISSING_BIN="$MISSING_BIN \t'sed' not found: $SED\n"
-[[ -x "$DU" ]]      || MISSING_BIN="$MISSING_BIN \t'du' not found: $DU\n"
-[[ -x "$GREP" ]]    || MISSING_BIN="$MISSING_BIN \t'grep' not found: $GREP\n"
-[[ -x "$CAT" ]]     || MISSING_BIN="$MISSING_BIN \t'cat' not found: $CAT\n"
 [[ -x "$MAILX" ]]   || MISSING_BIN="$MISSING_BIN \t'mail' not found: $MAILX\n"
 [[ ! -x "$GZIP" && "$COMP" = 'gzip' ]]    && MISSING_BIN="$MISSING_BIN 'gzip' not found: $GZIP\n"
 [[ ! -x "$BZIP2" && "$COMP" = 'bzip2' ]]  && MISSING_BIN="$MISSING_BIN 'bzip2' not found: $BZIP2\n"
@@ -107,35 +91,28 @@ declare -r PG_DUMP
 declare -r PSQL
 declare -r GZIP
 declare -r BZIP2
-declare -r RM
-declare -r MKDIR
-declare -r DATE
-declare -r LN
-declare -r SED
-declare -r DU
-declare -r GREP
-declare -r CAT
 declare -r MAILX
 
 # export PG environment variables for libpq
 export PGUSER PGPASSWORD PGHOST PGPORT PGDATABASE
 
-FULLDATE=$($DATE +%Y-%m-%d_%Hh%Mm)  # Datestamp e.g 2002-09-21_11h52m
-DOW=$($DATE +%A)                    # Day of the week e.g. "Monday"
-DNOW=$($DATE +%u)                   # Day number of the week 1 to 7 where 1 represents Monday
-DOM=$($DATE +%d)                    # Date of the Month e.g. 27
-M=$($DATE +%B)                      # Month e.g "January"
-W=$($DATE +%V)                      # Week Number e.g 37
+FULLDATE=$(date +%Y-%m-%d_%Hh%Mm)  # Datestamp e.g 2002-09-21_11h52m
+DOW=$(date +%A)                    # Day of the week e.g. "Monday"
+DNOW=$(date +%u)                   # Day number of the week 1 to 7 where 1 represents Monday
+DOM=$(date +%d)                    # Date of the Month e.g. 27
+M=$(date +%B)                      # Month e.g "January"
+W=$(date +%V)                      # Week Number e.g 37
 backupfiles=""
 OPT="--blobs --format=${DUMPFORMAT}"  # OPT string for use with pg_dump
 
 # Create required directories
-[[ ! -e "$BACKUPDIR/daily" ]]   && $MKDIR -p "$BACKUPDIR/daily"
-[[ ! -e "$BACKUPDIR/weekly" ]]  && $MKDIR -p "$BACKUPDIR/weekly"
-[[ ! -e "$BACKUPDIR/monthly" ]] && $MKDIR -p "$BACKUPDIR/monthly"
+[[ ! -e "$BACKUPDIR/daily" ]]   && mkdir -p "$BACKUPDIR/daily"
+[[ ! -e "$BACKUPDIR/weekly" ]]  && mkdir -p "$BACKUPDIR/weekly"
+[[ ! -e "$BACKUPDIR/monthly" ]] && mkdir -p "$BACKUPDIR/monthly"
 if [[ "$LATEST" = "yes" ]] ; then
-  [[ ! -e "$BACKUPDIR/latest" ]] && $MKDIR -p "$BACKUPDIR/latest"
-  $RM -f $BACKUPDIR/latest/*
+  [[ ! -e "$BACKUPDIR/latest" ]] && mkdir -p "$BACKUPDIR/latest"
+  # cleanup previous 'latest' links
+  rm -f $BACKUPDIR/latest/*
 fi
 
 # Output Extension (depends on the output format)
@@ -197,7 +174,7 @@ compression () {
     echo "No valid compression option set, check advanced settings"
   fi
   if [[ "$LATEST" = "yes" ]] ; then
-    $LN -f ${_fname}${SUFFIX} "$BACKUPDIR/latest/"
+    ln -f ${_fname}${SUFFIX} "$BACKUPDIR/latest/"
   fi
   return 0
 }
@@ -232,35 +209,35 @@ fi
 
 # If backing up all DBs on the server
 if [[ "$DBNAMES" = "all" ]] ; then
-  DBNAMES=$($PSQL -P format=Unaligned -tqc 'SELECT datname FROM pg_database;' | $SED 's/ /%/g')
+  DBNAMES=$($PSQL -P format=Unaligned -tqc 'SELECT datname FROM pg_database;' | sed 's/ /%/g')
 
   # If DBs are excluded
   for exclude in $DBEXCLUDE ; do
-    DBNAMES=$(echo $DBNAMES | $SED "s/\b$exclude\b//g")
+    DBNAMES=$(echo $DBNAMES | sed "s/\b$exclude\b//g")
   done
 
   MDBNAMES=$DBNAMES
 fi
 
-$CAT <<EOT
+cat <<EOT
 ======================================================================
 pgsql-backup VER $VER
    Based on AutoMySQLBackup
    http://sourceforge.net/projects/automysqlbackup/
 ======================================================================
 Backup of PostgreSQL Database Server - $HOST
-Started $($DATE)
+Started $(date)
 ======================================================================
 EOT
 
 # Monthly Full Backup of all Databases on the 1st of the month
 if [[ $DOM = "01" ]] ; then
   for MDB in $MDBNAMES ; do
-    MDB=$(echo $MDB | $SED 's/%/ /g')
+    MDB=$(echo $MDB | sed 's/%/ /g')
 
     echo Monthly Backup of $MDB...
 
-    [[ ! -e "$BACKUPDIR/monthly/$MDB" ]] && $MKDIR -p "$BACKUPDIR/monthly/$MDB"
+    [[ ! -e "$BACKUPDIR/monthly/$MDB" ]] && mkdir -p "$BACKUPDIR/monthly/$MDB"
     dbdump "${MDB}" "${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
     compression "${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
     backupfiles="${backupfiles} ${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}${SUFFIX}"
@@ -269,11 +246,11 @@ if [[ $DOM = "01" ]] ; then
 fi
 
 for DB in $DBNAMES ; do
-  DB=$(echo $DB | $SED 's/%/ /g')
+  DB=$(echo $DB | sed 's/%/ /g')
 
   # Create Seperate directory for each DB
-  [[ ! -e "$BACKUPDIR/daily/$DB" ]]   && $MKDIR -p "$BACKUPDIR/daily/$DB"
-  [[ ! -e "$BACKUPDIR/weekly/$DB" ]]  && $MKDIR -p "$BACKUPDIR/weekly/$DB"
+  [[ ! -e "$BACKUPDIR/daily/$DB" ]]   && mkdir -p "$BACKUPDIR/daily/$DB"
+  [[ ! -e "$BACKUPDIR/weekly/$DB" ]]  && mkdir -p "$BACKUPDIR/weekly/$DB"
 
   if [[ $DNOW = $DOWEEKLY ]] ; then
     # Weekly Backup
@@ -286,7 +263,7 @@ for DB in $DBNAMES ; do
       else
         REMW="$(expr $W - 5)"
       fi
-    $RM -f $BACKUPDIR/weekly/$DB/${DB}_week.$REMW.*
+    rm -f $BACKUPDIR/weekly/$DB/${DB}_week.$REMW.*
     echo
     dbdump "$DB" "$BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
     compression "$BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
@@ -296,7 +273,7 @@ for DB in $DBNAMES ; do
     # Daily Backup
     echo "Daily Backup of Database '$DB'"
     echo "Rotating last weeks Backup..."
-    $RM -f $BACKUPDIR/daily/$DB/*.$DOW.*
+    rm -f $BACKUPDIR/daily/$DB/*.$DOW.*
     echo
     dbdump "$DB" "$BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
     compression "$BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
@@ -305,12 +282,12 @@ for DB in $DBNAMES ; do
   fi
 done
 
-$CAT <<EOT
-Backup End $($DATE)
+cat <<EOT
+Backup End $(date)
 ======================================================================
 Total disk space used for backup storage..
 Size - Location
-$($DU -hs "$BACKUPDIR")
+$(du -hs "$BACKUPDIR")
 ======================================================================
 EOT
 
@@ -325,7 +302,7 @@ if [[ -n "$POSTBACKUP" ]] ; then
   echo ======================================================================
 fi
 
-#Clean up IO redirection
+# Clean up IO redirection
 exec 1>&6 6>&-      # Restore stdout and close file descriptor #6.
 exec 1>&7 7>&-      # Restore stdout and close file descriptor #7.
 
@@ -337,15 +314,15 @@ case "$MAILCONTENT" in
     ERRORNOTE="WARNING: Error Reported - "
   fi
   # Get backup size
-  ATTSIZE=$($DU -c $backupfiles | $GREP "[[:digit:][:space:]]total$" | $SED s/\s*total//)
+  ATTSIZE=$(du -c $backupfiles | grep "[[:digit:][:space:]]total$" | sed s/\s*total//)
   if [[ $MAXATTSIZE -lt $ATTSIZE ]] ; then
-    $CAT "$log_stdout" | $MAILX -s "WARNING! - PostgreSQL Backup exceeds set maximum attachment size on $HOST - $FULLDATE" $MAILADDR
+    cat "$log_stdout" | $MAILX -s "WARNING! - PostgreSQL Backup exceeds set maximum attachment size on $HOST - $FULLDATE" $MAILADDR
   fi
 ;;
 'log')
-  $CAT "$log_stdout" | $MAILX -s "PostgreSQL Backup Log for $HOST - $FULLDATE" $MAILADDR
+  cat "$log_stdout" | $MAILX -s "PostgreSQL Backup Log for $HOST - $FULLDATE" $MAILADDR
   if [[ -s "$log_stderr" ]] ; then
-    $CAT "$log_stderr" | $MAILX -s "ERRORS REPORTED: PostgreSQL Backup error Log for $HOST - $FULLDATE" $MAILADDR
+    cat "$log_stderr" | $MAILX -s "ERRORS REPORTED: PostgreSQL Backup error Log for $HOST - $FULLDATE" $MAILADDR
   fi
 ;;
 'quiet')
@@ -354,30 +331,30 @@ case "$MAILCONTENT" in
 =============================================
 !!!!!! WARNING !!!!!!
 Errors reported during AutoPostgreSQLBackup execution... BACKUP FAILED.
-$($CAT $log_stderr)
+$(cat $log_stderr)
 =============================================
 Full Log Below
 =============================================
-$($CAT $log_stdout)
+$(cat $log_stdout)
 =============================================
 EOT
   fi
 ;;
 *)
   if [[ -s "$log_stderr" ]] ; then
-    $CAT <<EOT
+    cat <<EOT
 =============================================
 !!!!!! WARNING !!!!!!
 Errors reported during AutoPostgreSQLBackup execution... BACKUP FAILED.
-$($CAT $log_stderr)
+$(cat $log_stderr)
 =============================================
 Full Log Below
 =============================================
-$($CAT $log_stdout)
+$(cat $log_stdout)
 =============================================
 EOT
   else
-    $CAT "$log_stdout"
+    cat "$log_stdout"
   fi
 ;;
 esac
@@ -389,7 +366,7 @@ else
 fi
 
 # Clean up Logfile
-$RM -f "$log_stdout"
-$RM -f "$log_stderr"
+rm -f "$log_stdout"
+rm -f "$log_stderr"
 
 exit $STATUS
