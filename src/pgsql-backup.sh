@@ -58,11 +58,11 @@ MAXATTSIZE=${MAXATTSIZE-4096}         # maximum email attachment size
 
 # Make sure our binaries are good
 PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-[[ -z "$PG_DUMP" ]] && PG_DUMP=$(which pg_dump 2> /dev/null)
-[[ -z "$PSQL" ]]    && PSQL=$(which psql 2> /dev/null)
-[[ -z "$MAILX" ]]   && MAILX=$(which mail 2> /dev/null)
-[[ -z "$GZIP" ]]    && GZIP=$(which gzip 2> /dev/null)
-[[ -z "$BZIP2" ]]   && BZIP2=$(which bzip2 2> /dev/null)
+[[ -z "${PG_DUMP}" ]] && PG_DUMP=$(which pg_dump 2> /dev/null)
+[[ -z "${PSQL}" ]]    && PSQL=$(which psql 2> /dev/null)
+[[ -z "${MAILX}" ]]   && MAILX=$(which mail 2> /dev/null)
+[[ -z "${GZIP}" ]]    && GZIP=$(which gzip 2> /dev/null)
+[[ -z "${BZIP2}" ]]   && BZIP2=$(which bzip2 2> /dev/null)
 MISSING_BIN=''
 [[ -x "$PG_DUMP" ]] || MISSING_BIN="$MISSING_BIN \t'pgdump' not found: $PG_DUMP\n"
 [[ -x "$PSQL" ]]    || MISSING_BIN="$MISSING_BIN \t'psql' not found: $PSQL\n"
