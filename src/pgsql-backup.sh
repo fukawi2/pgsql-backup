@@ -111,6 +111,10 @@ W=$(date +%V)                      # Week Number e.g 37
 backupfiles=""
 OPT="--blobs --format=${DUMPFORMAT}"  # OPT string for use with pg_dump
 
+# Does backup dir exist and can we write to it?
+[[ ! -d "$BACKUPDIR" ]]  && { echo "Destination $BACKUPDIR does not exist or is inaccessible; Aborting" >&2; exit 1; }
+[[ ! -w "$BACKUPDIR" ]]  && { echo "Unable to write to $BACKUPDIR; Aborting" >&2; exit 3; }
+
 # Create required directories
 [[ ! -e "$BACKUPDIR/daily" ]]   && mkdir -p "$BACKUPDIR/daily"
 [[ ! -e "$BACKUPDIR/weekly" ]]  && mkdir -p "$BACKUPDIR/weekly"
