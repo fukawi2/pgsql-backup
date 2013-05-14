@@ -69,11 +69,15 @@ MISSING_BIN=''
 [[ -x "$MAILX" ]]   || MISSING_BIN="$MISSING_BIN \t'mail' not found: $MAILX\n"
 [[ ! -x "$GZIP" && "$COMP" = 'gzip' ]]    && MISSING_BIN="$MISSING_BIN 'gzip' not found: $GZIP\n"
 [[ ! -x "$BZIP2" && "$COMP" = 'bzip2' ]]  && MISSING_BIN="$MISSING_BIN 'bzip2' not found: $BZIP2\n"
+[[ ! -x "$XZ" && "$COMP" = 'xz' ]]        && MISSING_BIN="$MISSING_BIN 'xz' not found: $xz2\n"
 if [[ -n "$MISSING_BIN" ]] ; then
   echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set." >&2
   echo "The missing files are:" >&2
   echo -e $MISSING_BIN >&2
 fi
+
+# strip any trailing slash from BACKUPDIR
+echo ${BACKUPDIR%/}
 
 # Make all config from options.conf READ-ONLY
 declare -r PGUSER
