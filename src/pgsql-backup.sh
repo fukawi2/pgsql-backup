@@ -23,7 +23,6 @@
 VER=0.9.9
 
 set -e  # treat any error as fatal
-set -u  # abort on unbound variable
 
 ### EXIT CODES
 # 0 = OK
