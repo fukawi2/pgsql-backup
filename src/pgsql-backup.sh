@@ -55,6 +55,7 @@ DBHOST=${DBHOST-localhost}            # database server to connect to
 DBNAMES=${DBNAMES-all}                # database names to backup
 MAILCONTENT=${MAILCONTENT-stdout}     # where to display output
 MAXATTSIZE=${MAXATTSIZE-4096}         # maximum email attachment size
+CONFIG_UMASK=${CONFIG_UMASK-0077}     # umask
 
 # Make sure our binaries are good
 PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
@@ -78,6 +79,9 @@ fi
 
 # strip any trailing slash from BACKUPDIR
 echo ${BACKUPDIR%/}
+
+# set our umask
+umask $CONFIG_UMASK
 
 # Make all config from options.conf READ-ONLY
 declare -r PGUSER

@@ -211,6 +211,16 @@ Type:     C<custom> or C<tar> or C<plain>
 
 Default:  custom
 
+=head2 CONFIG_UMASK
+
+umask controls the permissions of created directories and files. The default
+is fairly restrictive (700 for directories, 600 for files). You may like/need
+to relax for your environment. Refer to L<umask(1)> for further information.
+
+Type:     Octal
+
+Default:  0077
+
 =head2 PREBACKUP
 
 Optional. A command to execute before the backup starts. eg, a database
