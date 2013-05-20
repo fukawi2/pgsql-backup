@@ -142,6 +142,7 @@ backupfiles=""
 OPT="--blobs"  # OPT string for use with pg_dump (format is appended below)
 
 # Does backup dir exist and can we write to it?
+[[ ! -n "$CONFIG_BACKUPDIR" ]]  && { echo "Configuration option 'CONFIG_BACKUPDIR' is not optional!" >&2; exit 2; }
 [[ ! -d "$CONFIG_BACKUPDIR" ]]  && { echo "Destination $CONFIG_BACKUPDIR does not exist or is inaccessible; Aborting" >&2; exit 1; }
 [[ ! -w "$CONFIG_BACKUPDIR" ]]  && { echo "Unable to write to $CONFIG_BACKUPDIR; Aborting" >&2; exit 3; }
 
