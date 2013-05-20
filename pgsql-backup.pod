@@ -40,7 +40,7 @@ configuration file. Example:
 
 The following configuration options exist in C<pgsql-backup.conf>.
 
-=head2 PGUSER
+=head2 CONFIG_PGUSER
 
 The username to connect to the PostgreSQL daemon as. This is the PostgreSQL
 username, not the system username.
@@ -49,7 +49,7 @@ Type:     String
 
 Default:  postgres
 
-=head2 PGPASSWORD
+=head2 CONFIG_PGPASSWORD
 
 The password required for the username specified above.
 
@@ -57,7 +57,7 @@ Type:     String
 
 Default:  
 
-=head2 PPGHOST
+=head2 CONFIG_PGHOST
 
 The hostname or IP Address of the machine running the PostgreSQL daemon you
 wish to backup. If the script is running on the same machine as the daemon,
@@ -67,7 +67,15 @@ Type:     String
 
 Default:  localhost
 
-=head2 PGDATABASE
+=head2 CONFIG_PGPORT
+
+The TCP port of the machine running the PostgreSQL daemon you wish to backup.
+
+Type:     Unsigned Integer
+
+Default:  5432
+
+=head2 CONFIG_PGDATABASE
 
 The dump process needs an initial database to connect to when dumping. You can
 generally leave this as C<postgres>, C<template1> or C<template0> unless you
@@ -78,7 +86,7 @@ Type:     String
 
 Default:  postgres
 
-=head2 DBNAMES
+=head2 CONFIG_DBNAMES
 
 Space-separated list of databases to include in the backup. Special keyword
 C<all> selects all databases the exist at run time. Each database will be
