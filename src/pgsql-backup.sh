@@ -147,11 +147,12 @@ OPT="--blobs"  # OPT string for use with pg_dump (format is appended below)
 [[ ! -w "$CONFIG_BACKUPDIR" ]]  && { echo "Unable to write to $CONFIG_BACKUPDIR; Aborting" >&2; exit 3; }
 
 # Create required directories
-[[ ! -e "$CONFIG_BACKUPDIR/daily" ]]   && mkdir -p "$CONFIG_BACKUPDIR/daily"
-[[ ! -e "$CONFIG_BACKUPDIR/weekly" ]]  && mkdir -p "$CONFIG_BACKUPDIR/weekly"
-[[ ! -e "$CONFIG_BACKUPDIR/monthly" ]] && mkdir -p "$CONFIG_BACKUPDIR/monthly"
+[[ ! -d "$CONFIG_BACKUPDIR/daily" ]]    && mkdir -p "$CONFIG_BACKUPDIR/daily"
+[[ ! -d "$CONFIG_BACKUPDIR/weekly" ]]   && mkdir -p "$CONFIG_BACKUPDIR/weekly"
+[[ ! -d "$CONFIG_BACKUPDIR/monthly" ]]  && mkdir -p "$CONFIG_BACKUPDIR/monthly"
+[[ ! -d "$CONFIG_BACKUPDIR/logs" ]]     && mkdir -p "$CONFIG_BACKUPDIR/logs"
 if [[ "$CONFIG_LATEST" = "yes" ]] ; then
-  [[ ! -e "$CONFIG_BACKUPDIR/latest" ]] && mkdir -p "$CONFIG_BACKUPDIR/latest"
+  [[ ! -d "$CONFIG_BACKUPDIR/latest" ]] && mkdir -p "$CONFIG_BACKUPDIR/latest"
   # cleanup previous 'latest' links
   rm -f $CONFIG_BACKUPDIR/latest/*
 fi
@@ -176,8 +177,8 @@ esac
 OPT="$OPT --format=${CONFIG_DUMPFORMAT}"
 
 # IO redirection for logging.
-log_stdout=$(mktemp "$CONFIG_BACKUPDIR/$CONFIG_PGHOST-$$-log.XXXX") # Logfile Name
-log_stderr=$(mktemp "$CONFIG_BACKUPDIR/$CONFIG_PGHOST-$$-err.XXXX") # Error Logfile Name
+log_stdout=$(mktemp "$CONFIG_BACKUPDIR/logs/$CONFIG_PGHOST-$$-log.XXXX") # Logfile Name
+log_stderr=$(mktemp "$CONFIG_BACKUPDIR/logs/$CONFIG_PGHOST-$$-err.XXXX") # Error Logfile Name
 touch $log_stdout
 exec 6>&1           # Link file descriptor #6 with stdout.
 exec > $log_stdout  # stdout replaced with file $log_stdout.
