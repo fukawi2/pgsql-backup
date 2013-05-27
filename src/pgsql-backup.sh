@@ -53,11 +53,11 @@ function set_config_defaults() {
   CONFIG_PREBACKUP=''
   CONFIG_POSTBACKUP=''
 
-  CONFIG_PG_DUMP=$(which pg_dump 2> /dev/null)
-  CONFIG_PSQL=$(which psql 2> /dev/null)
-  CONFIG_MAILX=$(which mail 2> /dev/null)
-  CONFIG_GZIP=$(which gzip 2> /dev/null)
-  CONFIG_BZIP2=$(which bzip2 2> /dev/null)
+  CONFIG_PG_DUMP=$(which pg_dump || true 2> /dev/null)
+  CONFIG_PSQL=$(which psql || true 2> /dev/null)
+  CONFIG_MAILX=$(which mail || true 2> /dev/null)
+  CONFIG_GZIP=$(which gzip || true 2> /dev/null)
+  CONFIG_BZIP2=$(which bzip2 || true 2> /dev/null)
 }
 
 # Path to options file
