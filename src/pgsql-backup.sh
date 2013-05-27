@@ -29,6 +29,7 @@ set -e  # treat any error as fatal
 # 1 = Unspecified Error
 # 2 = Configuration File Error
 # 3 = Permission Denied
+# 4 = Dependency Error
 
 function set_config_defaults() {
   CONFIG_PGUSER='postgres'
@@ -96,6 +97,7 @@ if [[ -n "$missing_bin" ]] ; then
   echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set." >&2
   echo "The missing files are:" >&2
   echo -e $missing_bin >&2
+  exit 4
 fi
 
 # strip any trailing slash from BACKUPDIR

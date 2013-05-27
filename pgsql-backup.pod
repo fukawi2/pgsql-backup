@@ -253,6 +253,24 @@ Default:
 
 =head1 SERVER PERMISSIONS
 
+The exit code of the script can be used to determine failure reasons.
+
+=over 4
+
+=item 0 = OK
+
+=item 1 = Unspecified Error
+
+=item 2 = Configuration File Error
+
+=item 3 = Permission Denied
+
+=item 4 = Dependency Error
+
+=back
+
+=head1 SERVER PERMISSIONS
+
 The PostgreSQL user that is doing the backup (not the system user) should
 ideally be a dedicated user:
 
