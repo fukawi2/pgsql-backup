@@ -2,12 +2,12 @@
 PROJECT=pgsql-backup
 
 ### Dependencies
-DEP_BINS=bash pg_dump psql rm mkdir date ln sed du grep cat mail gzip bzip2
+# Note we don't include deps that have configurable paths since they may exist
+# in a location not included in $PATH (hence why they have config options)
+DEP_BINS=bash rm mkdir date ln sed du grep cat
 
 ### Destination Paths
-D_BIN=/usr/local/sbin
-D_DOC=/usr/local/share/doc/$(PROJECT)
-D_MAN=/usr/local/share/man
+PREFIX=/usr/local
 D_CNF=/etc
 
 ###############################################################################
@@ -16,8 +16,8 @@ all: install
 
 install: test bin config docs
 	# install the actual scripts
-	install -D -m 0755 src/$(PROJECT).sh $(DESTDIR)$(D_BIN)/$(PROJECT)
-	install -D -m 0644 $(PROJECT).1.man $(DESTDIR)$(D_MAN)/man1/$(PROJECT).1p
+	install -D -m 0755 src/$(PROJECT).sh $(DESTDIR)$(PREFIX)/bin/$(PROJECT)
+	install -D -m 0644 $(PROJECT).1.man $(DESTDIR)$(PREFIX)/share/man/man1/$(PROJECT).1p
 
 test:
 	@echo "==> Checking for required external dependencies"
@@ -34,16 +34,16 @@ test:
 
 bin: test src/$(PROJECT).sh
 
-config: $(PROJECT).conf
+config: pgsql-backup.conf
 	# Install (without overwriting) configuration files
-	[[ -e $(DESTDIR)$(D_CNF)/$(PROJECT).conf ]] || \
-		install -D -m 0644 $(PROJECT).conf $(DESTDIR)$(D_CNF)/$(PROJECT).conf
+	[[ -e $(DESTDIR)$(D_CNF)/pgsql-backup.conf ]] || \
+		install -D -m 0644 $(PROJECT).conf $(DESTDIR)$(D_CNF)/pgsql-backup.conf
 
 docs: $(PROJECT).pod
 	# build man pages
 	pod2man --name=$(PROJECT) $(PROJECT).pod $(PROJECT).1.man
 
 uninstall:
-	rm -f $(DESTDIR)$(D_BIN)/$(PROJECT)
-	rm -f $(DESTDIR)$(D_MAN)/man1/$(PROJECT).1p
-	@echo "Leaving '$(DESTDIR)$(D_CNF)/$(PROJECT).conf' untouched"
+	rm -f $(DESTDIR)$(PREFIX)/bin/$(PROJECT)
+	rm -f $(DESTDIR)$(PREFIX)/share/man/man1/$(PROJECT).1p
+	@echo "Leaving '$(DESTDIR)$(D_CNF)/pgsql-backup.conf' untouched"

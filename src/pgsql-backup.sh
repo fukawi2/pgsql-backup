@@ -29,6 +29,36 @@ set -e  # treat any error as fatal
 # 1 = Unspecified Error
 # 2 = Configuration File Error
 # 3 = Permission Denied
+# 4 = Dependency Error
+
+function set_config_defaults() {
+  CONFIG_PGUSER='postgres'
+  CONFIG_PGPASSWORD=''
+  CONFIG_PGHOST='localhost'
+  CONFIG_PGPORT='5432'
+  CONFIG_PGDATABASE='postgres'
+  CONFIG_DBNAMES='all'
+  CONFIG_BACKUPDIR=''
+  CONFIG_MAILCONTENT='stdout'
+  CONFIG_MAXATTSIZE='4000'
+  CONFIG_MAILADDR='root'
+  CONFIG_DBEXCLUDE=''
+  CONFIG_CREATE_DATABASE='yes'
+  CONFIG_DOWEEKLY='1'
+  CONFIG_COMP='none'
+  CONFIG_LATEST='1'
+  CONFIG_SOCKET=''
+  CONFIG_DUMPFORMAT='custom'
+  CONFIG_UMASK='0077'
+  CONFIG_PREBACKUP=''
+  CONFIG_POSTBACKUP=''
+
+  CONFIG_PG_DUMP=$(which pg_dump 2> /dev/null || true)
+  CONFIG_PSQL=$(which psql 2> /dev/null || true)
+  CONFIG_MAILX=$(which mail 2> /dev/null || true)
+  CONFIG_GZIP=$(which gzip  2> /dev/null || true)
+  CONFIG_BZIP2=$(which bzip2 2> /dev/null || true)
+}
 
 # Path to options file
 user_rc="$1"
@@ -45,62 +75,64 @@ else
   exit 2
 fi
 
+# set our path before set_config_defaults() because we need it there
+PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+# set our default config options before we source the config file
+set_config_defaults
+
 # Load the configuration file
 [[ ! -r "$rc_fname" ]] && { echo "Unable to read configuration file: $rc_fname; Permission Denied" >&2; exit 3; }
 source $rc_fname || { echo "Error reading configuration file: $rc_fname" >&2; exit 2; }
 
-# Validate the configuration
-MAILADDR=${MAILADDR-root@localhost}   # where to send reports to
-DBHOST=${DBHOST-localhost}            # database server to connect to
-DBNAMES=${DBNAMES-all}                # database names to backup
-MAILCONTENT=${MAILCONTENT-stdout}     # where to display output
-MAXATTSIZE=${MAXATTSIZE-4096}         # maximum email attachment size
-
 # Make sure our binaries are good
-PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-[[ -z "${PG_DUMP}" ]] && PG_DUMP=$(which pg_dump 2> /dev/null)
-[[ -z "${PSQL}" ]]    && PSQL=$(which psql 2> /dev/null)
-[[ -z "${MAILX}" ]]   && MAILX=$(which mail 2> /dev/null)
-[[ -z "${GZIP}" ]]    && GZIP=$(which gzip 2> /dev/null)
-[[ -z "${BZIP2}" ]]   && BZIP2=$(which bzip2 2> /dev/null)
-MISSING_BIN=''
-[[ -x "$PG_DUMP" ]] || MISSING_BIN="$MISSING_BIN \t'pgdump' not found: $PG_DUMP\n"
-[[ -x "$PSQL" ]]    || MISSING_BIN="$MISSING_BIN \t'psql' not found: $PSQL\n"
-[[ -x "$MAILX" ]]   || MISSING_BIN="$MISSING_BIN \t'mail' not found: $MAILX\n"
-[[ ! -x "$GZIP" && "$COMP" = 'gzip' ]]    && MISSING_BIN="$MISSING_BIN 'gzip' not found: $GZIP\n"
-[[ ! -x "$BZIP2" && "$COMP" = 'bzip2' ]]  && MISSING_BIN="$MISSING_BIN 'bzip2' not found: $BZIP2\n"
-[[ ! -x "$XZ" && "$COMP" = 'xz' ]]        && MISSING_BIN="$MISSING_BIN 'xz' not found: $xz2\n"
-if [[ -n "$MISSING_BIN" ]] ; then
+missing_bin=''
+[[ ! -x "$CONFIG_PG_DUMP" ]] && missing_bin="$missing_bin\t'pgdump' not found: $CONFIG_PG_DUMP\n"
+[[ ! -x "$CONFIG_PSQL" ]]    && missing_bin="$missing_bin\t'psql' not found: $CONFIG_PSQL\n"
+[[ ! -x "$CONFIG_MAILX" ]]   && missing_bin="$missing_bin\t'mail' not found: $CONFIG_MAILX\n"
+[[ ! -x "$CONFIG_GZIP"  && "$CONFIG_COMP" = 'gzip' ]]   && missing_bin="$missing_bin\t'gzip' not found: $CONFIG_GZIP\n"
+[[ ! -x "$CONFIG_BZIP2" && "$CONFIG_COMP" = 'bzip2' ]]  && missing_bin="$missing_bin\t'bzip2' not found: $CONFIG_BZIP2\n"
+[[ ! -x "$CONFIG_XZ"    && "$CONFIG_COMP" = 'xz' ]]     && missing_bin="$missing_bin\t'xz' not found: $CONFIG_xz2\n"
+if [[ -n "$missing_bin" ]] ; then
   echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set." >&2
   echo "The missing files are:" >&2
-  echo -e $MISSING_BIN >&2
+  echo -e $missing_bin >&2
+  exit 4
 fi
 
 # strip any trailing slash from BACKUPDIR
-echo ${BACKUPDIR%/}
+CONFIG_BACKUPDIR="${CONFIG_BACKUPDIR%/}"
+
+# set our umask
+umask $CONFIG_UMASK
 
 # Make all config from options.conf READ-ONLY
-declare -r PGUSER
-declare -r PGPASSWORD
-declare -r PGHOST
-declare -r PGPORT
-declare -r BACKUPDIR
-declare -r MAILCONTENT
-declare -r MAXATTSIZE
-declare -r MAILADDR
-declare -r DBEXCLUDE
-declare -r CREATE_DATABASE
-declare -r DOWEEKLY
-declare -r COMP
-declare -r LATEST
-declare -r PG_DUMP
-declare -r PSQL
-declare -r GZIP
-declare -r BZIP2
-declare -r MAILX
+declare -r CONFIG_PGUSER
+declare -r CONFIG_PGPASSWORD
+declare -r CONFIG_PGHOST
+declare -r CONFIG_PGPORT
+declare -r CONFIG_BACKUPDIR
+declare -r CONFIG_MAILCONTENT
+declare -r CONFIG_MAXATTSIZE
+declare -r CONFIG_MAILADDR
+declare -r CONFIG_DBEXCLUDE
+declare -r CONFIG_CREATE_DATABASE
+declare -r CONFIG_DOWEEKLY
+declare -r CONFIG_COMP
+declare -r CONFIG_LATEST
+declare -r CONFIG_PG_DUMP
+declare -r CONFIG_PSQL
+declare -r CONFIG_GZIP
+declare -r CONFIG_BZIP2
+declare -r CONFIG_MAILX
+declare -r CONFIG_UMASK
 
 # export PG environment variables for libpq
-export PGUSER PGPASSWORD PGHOST PGPORT PGDATABASE
+export PGUSER="$CONFIG_PGUSER"
+export PGPASSWORD="$CONFIG_PGPASSWORD"
+export PGHOST="$CONFIG_PGHOST"
+export PGPORT="$CONFIG_PGPORT"
+export PGDATABASE="$CONFIG_PGDATABASE"
 
 FULLDATE=$(date +%Y-%m-%d_%Hh%Mm)  # Datestamp e.g 2002-09-21_11h52m
 DOW=$(date +%A)                    # Day of the week e.g. "Monday"
@@ -109,39 +141,46 @@ DOM=$(date +%d)                    # Date of the Month e.g. 27
 M=$(date +%B)                      # Month e.g "January"
 W=$(date +%V)                      # Week Number e.g 37
 backupfiles=""
-OPT="--blobs --format=${DUMPFORMAT}"  # OPT string for use with pg_dump
+OPT="--blobs"  # OPT string for use with pg_dump (format is appended below)
 
 # Does backup dir exist and can we write to it?
-[[ ! -d "$BACKUPDIR" ]]  && { echo "Destination $BACKUPDIR does not exist or is inaccessible; Aborting" >&2; exit 1; }
-[[ ! -w "$BACKUPDIR" ]]  && { echo "Unable to write to $BACKUPDIR; Aborting" >&2; exit 3; }
+[[ ! -n "$CONFIG_BACKUPDIR" ]]  && { echo "Configuration option 'CONFIG_BACKUPDIR' is not optional!" >&2; exit 2; }
+[[ ! -d "$CONFIG_BACKUPDIR" ]]  && { echo "Destination $CONFIG_BACKUPDIR does not exist or is inaccessible; Aborting" >&2; exit 1; }
+[[ ! -w "$CONFIG_BACKUPDIR" ]]  && { echo "Unable to write to $CONFIG_BACKUPDIR; Aborting" >&2; exit 3; }
 
 # Create required directories
-[[ ! -e "$BACKUPDIR/daily" ]]   && mkdir -p "$BACKUPDIR/daily"
-[[ ! -e "$BACKUPDIR/weekly" ]]  && mkdir -p "$BACKUPDIR/weekly"
-[[ ! -e "$BACKUPDIR/monthly" ]] && mkdir -p "$BACKUPDIR/monthly"
-if [[ "$LATEST" = "yes" ]] ; then
-  [[ ! -e "$BACKUPDIR/latest" ]] && mkdir -p "$BACKUPDIR/latest"
+[[ ! -d "$CONFIG_BACKUPDIR/daily" ]]    && mkdir -p "$CONFIG_BACKUPDIR/daily"
+[[ ! -d "$CONFIG_BACKUPDIR/weekly" ]]   && mkdir -p "$CONFIG_BACKUPDIR/weekly"
+[[ ! -d "$CONFIG_BACKUPDIR/monthly" ]]  && mkdir -p "$CONFIG_BACKUPDIR/monthly"
+[[ ! -d "$CONFIG_BACKUPDIR/logs" ]]     && mkdir -p "$CONFIG_BACKUPDIR/logs"
+if [[ "$CONFIG_LATEST" = "yes" ]] ; then
+  [[ ! -d "$CONFIG_BACKUPDIR/latest" ]] && mkdir -p "$CONFIG_BACKUPDIR/latest"
   # cleanup previous 'latest' links
-  rm -f $BACKUPDIR/latest/*
+  rm -f $CONFIG_BACKUPDIR/latest/*
 fi
 
 # Output Extension (depends on the output format)
-if [[ "$DUMPFORMAT" = 'tar' ]] ; then
+case "$CONFIG_DUMPFORMAT" in
+'tar')
   OUTEXT='tar'
-elif [[ "$DUMPFORMAT" = 'plain' ]] ; then
+  ;;
+'plain')
   OUTEXT='sql'
-elif [[ "$DUMPFORMAT" = 'custom' ]] ; then
-  OUTEXT='c'
-else
+  ;;
+'custom')
+  OUTEXT='dump'
+  ;;
+*)
   echo "Invalid output format configured. Defaulting to 'custom'" >&2
   DUMPFORMAT='custom'
-  OUTEXT='c'
-fi
-OPT="$OPT --format=${DUMPFORMAT}"
+  OUTEXT='dump'
+  ;;
+esac
+OPT="$OPT --format=${CONFIG_DUMPFORMAT}"
 
 # IO redirection for logging.
-log_stdout=$(mktemp "$BACKUPDIR/$DBHOST-$$-log.XXXX") # Logfile Name
-log_stderr=$(mktemp "$BACKUPDIR/$DBHOST-$$-err.XXXX") # Error Logfile Name
+log_stdout=$(mktemp "$CONFIG_BACKUPDIR/logs/$CONFIG_PGHOST-$$-log.XXXX") # Logfile Name
+log_stderr=$(mktemp "$CONFIG_BACKUPDIR/logs/$CONFIG_PGHOST-$$-err.XXXX") # Error Logfile Name
 touch $log_stdout
 exec 6>&1           # Link file descriptor #6 with stdout.
 exec > $log_stdout  # stdout replaced with file $log_stdout.
@@ -156,7 +195,7 @@ exec 2> $log_stderr # stderr replaced with file $log_stderr.
 dbdump () {
   local _args="$1"
   local _output_fname="$2"
-  $PG_DUMP $OPT $_args > $_output_fname
+  $CONFIG_PG_DUMP $OPT $_args > $_output_fname
   return $?
 }
 
@@ -165,31 +204,31 @@ SUFFIX=""
 compression () {
   local _fname="$1"
 
-  if [[ "$COMP" = "gzip" ]] ; then
+  if [[ "$CONFIG_COMP" = "gzip" ]] ; then
     SUFFIX=".gz"
     echo Backup Information for "${_fname}${SUFFIX}"
-    $GZIP -f "$_fname"
-    $GZIP -l "${_fname}${SUFFIX}"
-  elif [[ "$COMP" = "bzip2" ]] ; then
+    $CONFIG_GZIP -f "$_fname"
+    $CONFIG_GZIP -l "${_fname}${SUFFIX}"
+  elif [[ "$CONFIG_COMP" = "bzip2" ]] ; then
     SUFFIX=".bz2"
     echo Compression information for "${_fname}${SUFFIX}"
-    $BZIP2 -f -v $_fname 2>&1
-  elif [[ "$COMP" = "xz" ]] ; then
+    $CONFIG_BZIP2 -f -v $_fname 2>&1
+  elif [[ "$CONFIG_COMP" = "xz" ]] ; then
     SUFFIX=".xz"
     echo Compression information for "${_fname}${SUFFIX}"
-    $XZ --compress --force $_fname 2>&1
-    $XZ--list ${_fname}${SUFFIX} 2>&1
-  elif [[ "$COMP" = "none" ]] && [[ "$DUMPFORMAT" = "custom" ]] ; then
+    $CONFIG_XZ --compress --force $_fname 2>&1
+    $CONFIG_XZ--list ${_fname}${SUFFIX} 2>&1
+  elif [[ "$CONFIG_COMP" = 'none' ]] && [[ "$CONFIG_DUMPFORMAT" = 'custom' ]] ; then
     # the 'custom' dump format compresses by default inside pg_dump if postgres
     # was built with zlib at compile time.
     echo "Using in-built compression of 'custom' format (if available)"
-  elif [[ "$COMP" = "none" ]] ; then
+  elif [[ "$CONFIG_COMP" = "none" ]] ; then
     echo "Using no compression"
   else
     echo "No valid compression option set, check advanced settings"
   fi
-  if [[ "$LATEST" = "yes" ]] ; then
-    ln -f ${_fname}${SUFFIX} "$BACKUPDIR/latest/"
+  if [[ "$CONFIG_LATEST" = "yes" ]] ; then
+    ln -f ${_fname}${SUFFIX} "$CONFIG_BACKUPDIR/latest/"
   fi
   return 0
 }
@@ -197,37 +236,37 @@ compression () {
 #########################################
 
 # Run command before we begin
-if [[ -n "$PREBACKUP" ]] ; then
+if [[ -n "$CONFIG_PREBACKUP" ]] ; then
   echo ======================================================================
   echo "Prebackup command output."
   echo
-  eval $PREBACKUP
+  eval "$CONFIG_PREBACKUP"
   echo
   echo ======================================================================
   echo
 fi
 
 # ask pg_dump to include CREATE DATABASE in the dump output?
-if [[ "$CREATE_DATABASE" = "no" ]] ; then
+if [[ "$CONFIG_CREATE_DATABASE" = "no" ]] ; then
   OPT="$OPT --no-create"
 else
   OPT="$OPT --create"
 fi
 
 # Hostname for LOG information; also append socket to
-if [[ "$DBHOST" = "localhost" ]] ; then
-  HOST="$hostname"
-  [[ "$SOCKET" ]] && OPT="$OPT --host=$SOCKET"
+if [[ "$CONFIG_PGHOST" = "localhost" ]] ; then
+  HOST="$HOSTNAME"
+  [[ "$CONFIG_SOCKET" ]] && OPT="$OPT --host=$CONFIG_SOCKET"
 else
-  HOST=$DBHOST
+  HOST=$CONFIG_PGHOST
 fi
 
 # If backing up all DBs on the server
-if [[ "$DBNAMES" = "all" ]] ; then
-  DBNAMES=$($PSQL -P format=Unaligned -tqc 'SELECT datname FROM pg_database;' | sed 's/ /%/g')
+if [[ "$CONFIG_DBNAMES" = "all" ]] ; then
+  DBNAMES=$($CONFIG_PSQL -P format=Unaligned -tqc 'SELECT datname FROM pg_database;' | sed 's/ /%/g')
 
   # If DBs are excluded
-  for exclude in $DBEXCLUDE ; do
+  for exclude in $CONFIG_DBEXCLUDE ; do
     DBNAMES=$(echo $DBNAMES | sed "s/\b$exclude\b//g")
   done
 fi
@@ -247,17 +286,17 @@ for DB in $DBNAMES ; do
   DB=$(echo $DB | sed 's/%/ /g')
 
   # Create Seperate directory for each DB
-  [[ ! -e "$BACKUPDIR/monthly/$MDB" ]]  && mkdir -p "$BACKUPDIR/monthly/$MDB"
-  [[ ! -e "$BACKUPDIR/weekly/$DB" ]]    && mkdir -p "$BACKUPDIR/weekly/$DB"
-  [[ ! -e "$BACKUPDIR/daily/$DB" ]]     && mkdir -p "$BACKUPDIR/daily/$DB"
+  [[ ! -e "$CONFIG_BACKUPDIR/monthly/$DB" ]]  && mkdir -p "$CONFIG_BACKUPDIR/monthly/$DB"
+  [[ ! -e "$CONFIG_BACKUPDIR/weekly/$DB" ]]   && mkdir -p "$CONFIG_BACKUPDIR/weekly/$DB"
+  [[ ! -e "$CONFIG_BACKUPDIR/daily/$DB" ]]    && mkdir -p "$CONFIG_BACKUPDIR/daily/$DB"
 
   if [[ $DOM = "01" ]] ; then
     # Monthly Backup
-    echo Monthly Backup of $MDB...
+    echo Monthly Backup of $DB...
     # note we never automatically delete old monthly backups
-    dbdump "${MDB}" "${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
-    compression "${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
-    backupfiles="${backupfiles} ${BACKUPDIR}/monthly/${MDB}/${MDB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}${SUFFIX}"
+    dbdump "${DB}" "${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
+    compression "${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
+    backupfiles="${backupfiles} ${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${DB}.${OUTEXT}${SUFFIX}"
     echo '----------------------------------------------------------------------'
   elif [[ $DNOW = $DOWEEKLY ]] ; then
     # Weekly Backup
@@ -270,21 +309,21 @@ for DB in $DBNAMES ; do
     else
       REMW="$(expr $W - 5)"
     fi
-    rm -f $BACKUPDIR/weekly/$DB/${DB}_week.$REMW.*
+    rm -f $CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$REMW.*
     echo
-    dbdump "$DB" "$BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
-    compression "$BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
-    backupfiles="$backupfiles $BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}$SUFFIX"
+    dbdump "$DB" "$CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
+    compression "$CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
+    backupfiles="$backupfiles $CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}$SUFFIX"
     echo '----------------------------------------------------------------------'
   else
     # Daily Backup
     echo "Daily Backup of Database '$DB'"
     echo "Rotating last weeks Backup..."
-    rm -f $BACKUPDIR/daily/$DB/*.$DOW.*
+    rm -f $CONFIG_BACKUPDIR/daily/$DB/*.$DOW.*
     echo
-    dbdump "$DB" "$BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
-    compression "$BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
-    backupfiles="$backupfiles $BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}$SUFFIX"
+    dbdump "$DB" "$CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
+    compression "$CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
+    backupfiles="$backupfiles $CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}$SUFFIX"
     echo '----------------------------------------------------------------------'
   fi
 done
@@ -294,16 +333,16 @@ Backup End $(date)
 ======================================================================
 Total disk space used for backup storage..
 Size - Location
-$(du -hs "$BACKUPDIR")
+$(du -hs "$CONFIG_BACKUPDIR")
 ======================================================================
 EOT
 
 # Run command when we're done
-if [[ -n "$POSTBACKUP" ]] ; then
+if [[ -n "$CONFIG_POSTBACKUP" ]] ; then
   echo ======================================================================
   echo "Postbackup command output."
   echo
-  new_backupfiles=$($POSTBACKUP $backupfiles)
+  new_backupfiles=$($CONFIG_POSTBACKUP $backupfiles)
   [[ -n "$new_backupfiles" ]] && backupfiles=$new_backupfiles
   echo
   echo ======================================================================
@@ -313,7 +352,7 @@ fi
 exec 1>&6 6>&-      # Restore stdout and close file descriptor #6.
 exec 1>&7 7>&-      # Restore stdout and close file descriptor #7.
 
-case "$MAILCONTENT" in
+case "$CONFIG_MAILCONTENT" in
 'files')
   if [[ -s "$log_stderr" ]] ; then
     # Include error log if is larger than zero.
@@ -321,20 +360,20 @@ case "$MAILCONTENT" in
     ERRORNOTE="WARNING: Error Reported - "
   fi
   # Get backup size
-  ATTSIZE=$(du -c $backupfiles | grep "[[:digit:][:space:]]total$" | sed s/\s*total//)
-  if [[ $MAXATTSIZE -lt $ATTSIZE ]] ; then
-    cat "$log_stdout" | $MAILX -s "WARNING! - PostgreSQL Backup exceeds set maximum attachment size on $HOST - $FULLDATE" $MAILADDR
+  size_of_attachments=$(du -c $backupfiles | grep "[[:digit:][:space:]]total$" | sed s/\s*total//)
+  if [[ $CONFIG_MAXATTSIZE -lt $size_of_attachments ]] ; then
+    cat "$log_stdout" | $CONFIG_MAILX -s "WARNING! - PostgreSQL Backup exceeds set maximum attachment size on $HOST - $FULLDATE" $CONFIG_MAILADDR
   fi
-;;
+  ;;
 'log')
-  cat "$log_stdout" | $MAILX -s "PostgreSQL Backup Log for $HOST - $FULLDATE" $MAILADDR
+  cat "$log_stdout" | $CONFIG_MAILX -s "PostgreSQL Backup Log for $HOST - $FULLDATE" $CONFIG_MAILADDR
   if [[ -s "$log_stderr" ]] ; then
-    cat "$log_stderr" | $MAILX -s "ERRORS REPORTED: PostgreSQL Backup error Log for $HOST - $FULLDATE" $MAILADDR
+    cat "$log_stderr" | $CONFIG_MAILX -s "ERRORS REPORTED: PostgreSQL Backup error Log for $HOST - $FULLDATE" $CONFIG_MAILADDR
   fi
-;;
+  ;;
 'quiet')
   if [[ -s "$log_stderr" ]] ; then
-    $MAILX -s "ERRORS REPORTED: PostgreSQL Backup error Log for $HOST - $FULLDATE" $MAILADDR <<EOT
+    $CONFIG_MAILX -s "ERRORS REPORTED: PostgreSQL Backup error Log for $HOST - $FULLDATE" $CONFIG_MAILADDR <<EOT
 =============================================
 !!!!!! WARNING !!!!!!
 Errors reported during AutoPostgreSQLBackup execution... BACKUP FAILED.
