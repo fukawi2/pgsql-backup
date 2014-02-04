@@ -277,10 +277,32 @@ function link_latest() {
 
 #########################################
 
+# Hostname for LOG information; also append socket to
+if [[ "$CONFIG_PGHOST" == "localhost" ]] ; then
+  HOST="$HOSTNAME"
+  [[ "$CONFIG_SOCKET" ]] && OPT="$OPT --host=$CONFIG_SOCKET"
+else
+  HOST=$CONFIG_PGHOST
+fi
+
+cat <<EOT
+===============================================================================
+Backup of PostgreSQL Database Server - $HOST
+Started $(date)
+  => PostgreSQL URI:  ${CONFIG_PGUSER}:*****@${CONFIG_PGHOST}:${CONFIG_PGPORT}/${CONFIG_PGDATABASE}
+  => Databases:       $CONFIG_DBNAMES
+       Excluding:     $CONFIG_DBEXCLUDE
+  => Dump Format:     $CONFIG_DUMPFORMAT
+  => Destination:     $CONFIG_BACKUPDIR
+  => Compression:     $CONFIG_COMP
+  => Encryption:      $CONFIG_ENCRYPT
+===============================================================================
+EOT
+
 # Run command before we begin
 if [[ -n "$CONFIG_PREBACKUP" ]] ; then
   echo ======================================================================
-  echo "Prebackup command output."
+  echo "Prebackup command output:"
   echo
   eval "$CONFIG_PREBACKUP"
   echo
@@ -295,14 +317,6 @@ else
   OPT="$OPT --create"
 fi
 
-# Hostname for LOG information; also append socket to
-if [[ "$CONFIG_PGHOST" == "localhost" ]] ; then
-  HOST="$HOSTNAME"
-  [[ "$CONFIG_SOCKET" ]] && OPT="$OPT --host=$CONFIG_SOCKET"
-else
-  HOST=$CONFIG_PGHOST
-fi
-
 # If backing up all DBs on the server
 if [[ "$CONFIG_DBNAMES" == "all" ]] ; then
   DBNAMES=$($CONFIG_PSQL -P format=Unaligned -tqc 'SELECT datname FROM pg_database;' | sed 's/ /%/g')
@@ -315,17 +329,6 @@ else
   # user has specified a list of databases to dump
   DBNAMES="$CONFIG_DBNAMES"
 fi
-
-cat <<EOT
-======================================================================
-pgsql-backup VER $VER
-   Based on AutoMySQLBackup
-   http://sourceforge.net/projects/automysqlbackup/
-======================================================================
-Backup of PostgreSQL Database Server - $HOST
-Started $(date)
-======================================================================
-EOT
 
 for DB in $DBNAMES ; do
   # Create Seperate directory for each DB
@@ -342,7 +345,9 @@ for DB in $DBNAMES ; do
     outfile=$(compress_file "$outfile")
     outfile=$(encrypt_file "$outfile")
     link_latest "$outfile"
+    echo "Backup written to $(basename $outfile)"
     backupfiles="${backupfiles} $outfile"
+    echo
     echo '----------------------------------------------------------------------'
   elif [[ $DNOW == $DOWEEKLY ]] ; then
     # Weekly Backup
@@ -356,38 +361,31 @@ for DB in $DBNAMES ; do
       REMW="$(expr $W - 5)"
     fi
     rm -f $CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$REMW.*
-    echo
     outfile="$CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
     dbdump "$DB" "$outfile"
     outfile=$(compress_file "$outfile")
     outfile=$(encrypt_file "$outfile")
     link_latest "$outfile"
+    echo "Backup written to $(basename $outfile)"
     backupfiles="$backupfiles $outfile"
+    echo
     echo '----------------------------------------------------------------------'
   else
     # Daily Backup
     echo "Daily Backup of Database '$DB'"
     echo "Rotating last weeks Backup..."
     rm -f $CONFIG_BACKUPDIR/daily/$DB/*.$DOW.*
-    echo
     outfile="$CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
     dbdump "$DB" "$outfile"
     outfile=$(compress_file "$outfile")
     outfile=$(encrypt_file "$outfile")
     link_latest "$outfile"
+    echo "Backup written to $(basename $outfile)"
     backupfiles="$backupfiles $outfile"
+    echo
     echo '----------------------------------------------------------------------'
   fi
 done
-
-cat <<EOT
-Backup End $(date)
-======================================================================
-Total disk space used for backup storage..
-Size - Location
-$(du -hs "$CONFIG_BACKUPDIR")
-======================================================================
-EOT
 
 if [[ "$CONFIG_ENCRYPT" == 'yes' ]] ; then
   cat <<EOT
@@ -400,6 +398,13 @@ appropriate.
 ======================================================================
 EOT
 fi
+
+cat <<EOT
+Total disk space used for backup storage:
+$(du -hs "$CONFIG_BACKUPDIR")
+======================================================================
+pgsql-backup $VER - http://github.com/fukawi2/pgsql-backup
+EOT
 
 # Run command when we're done
 if [[ -n "$CONFIG_POSTBACKUP" ]] ; then
