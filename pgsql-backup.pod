@@ -20,25 +20,30 @@ several locations:
 =back
 
 The last location above is a legacy location and should not be used. Existing
-users should relocate /etc/pgsql-backup/options.conf to /etc/pgsql-backup.conf
+users should relocate C</etc/pgsql-backup/options.conf> to the new path
+C</etc/pgsql-backup.conf>
 
 =head1 DESCRIPTION
 
-This script is designed to be ran daily, but can be run more often. Rolling
-daily, weekly and monthly backups are created in the specified location for
-each database requested to be backed up. Backups can be optionally compressed
-to save diskspace. Backups can also be optionally emailed as attachments.
+This script is designed to be ran daily, but can be run more often. If running
+multiple times per day, only the most-recent backup for the day will be kept on
+disk. Rolling daily, weekly and monthly backups are created in the specified
+location for each database requested to be backed up. Backups can be optionally
+compressed to save diskspace. Encryption of the backup files is also available.
+Backups can also be optionally emailed as attachments.
 
 =head1 OPTIONS
 
 Only a single argument is accepted on the command line: a specific path to a
-configuration file. Example:
+configuration file. This argument is OPTIONAL. Example:
 
   pgsql-backup /var/lib/pgsql/pgsql-backup.conf
 
 =head1 CONFIGURATION
 
-The following configuration options exist in C<pgsql-backup.conf>.
+The following configuration options exist in C<pgsql-backup.conf>. The
+configuration file must have permissions rw------- (600) or less to protect
+any sensitive information (eg, usernames, passwords, encryption keys etc)
 
 =head2 CONFIG_PGUSER
 
