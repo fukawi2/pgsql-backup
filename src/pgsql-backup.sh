@@ -58,6 +58,7 @@ function set_config_defaults() {
   CONFIG_MAILX=$(which mail 2> /dev/null || true)
   CONFIG_GZIP=$(which gzip  2> /dev/null || true)
   CONFIG_BZIP2=$(which bzip2 2> /dev/null || true)
+  CONFIG_XZ=$(which xz 2> /dev/null || true)
 }
 
 # Path to options file
@@ -90,9 +91,9 @@ missing_bin=''
 [[ ! -x "$CONFIG_PG_DUMP" ]] && missing_bin="$missing_bin\t'pgdump' not found: $CONFIG_PG_DUMP\n"
 [[ ! -x "$CONFIG_PSQL" ]]    && missing_bin="$missing_bin\t'psql' not found: $CONFIG_PSQL\n"
 [[ ! -x "$CONFIG_MAILX" ]]   && missing_bin="$missing_bin\t'mail' not found: $CONFIG_MAILX\n"
-[[ ! -x "$CONFIG_GZIP"  && "$CONFIG_COMP" = 'gzip' ]]   && missing_bin="$missing_bin\t'gzip' not found: $CONFIG_GZIP\n"
-[[ ! -x "$CONFIG_BZIP2" && "$CONFIG_COMP" = 'bzip2' ]]  && missing_bin="$missing_bin\t'bzip2' not found: $CONFIG_BZIP2\n"
-[[ ! -x "$CONFIG_XZ"    && "$CONFIG_COMP" = 'xz' ]]     && missing_bin="$missing_bin\t'xz' not found: $CONFIG_xz2\n"
+[[ ! -x "$CONFIG_GZIP"    && "$CONFIG_COMP" = 'gzip' ]]   && missing_bin="$missing_bin\t'gzip' not found: $CONFIG_GZIP\n"
+[[ ! -x "$CONFIG_BZIP2"   && "$CONFIG_COMP" = 'bzip2' ]]  && missing_bin="$missing_bin\t'bzip2' not found: $CONFIG_BZIP2\n"
+[[ ! -x "$CONFIG_XZ"      && "$CONFIG_COMP" = 'xz' ]]     && missing_bin="$missing_bin\t'xz' not found: $CONFIG_XZ\n"
 if [[ -n "$missing_bin" ]] ; then
   echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set." >&2
   echo "The missing files are:" >&2
