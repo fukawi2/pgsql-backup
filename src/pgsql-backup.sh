@@ -93,10 +93,10 @@ missing_bin=''
 [[ ! -x "$CONFIG_PG_DUMP" ]] && missing_bin="$missing_bin\t'pgdump' not found: $CONFIG_PG_DUMP\n"
 [[ ! -x "$CONFIG_PSQL" ]]    && missing_bin="$missing_bin\t'psql' not found: $CONFIG_PSQL\n"
 [[ ! -x "$CONFIG_MAILX" ]]   && missing_bin="$missing_bin\t'mail' not found: $CONFIG_MAILX\n"
-[[ ! -x "$CONFIG_GZIP"    && "$CONFIG_COMP" = 'gzip' ]]   && missing_bin="$missing_bin\t'gzip' not found: $CONFIG_GZIP\n"
-[[ ! -x "$CONFIG_BZIP2"   && "$CONFIG_COMP" = 'bzip2' ]]  && missing_bin="$missing_bin\t'bzip2' not found: $CONFIG_BZIP2\n"
-[[ ! -x "$CONFIG_XZ"      && "$CONFIG_COMP" = 'xz' ]]     && missing_bin="$missing_bin\t'xz' not found: $CONFIG_XZ\n"
-[[ ! -x "$CONFIG_OPENSSL" && "$CONFIG_ENCRYPT" = 'yes' ]] && missing_bin="$missing_bin\t'openssl' not found: $CONFIG_OPENSSL\n"
+[[ ! -x "$CONFIG_GZIP"    && "$CONFIG_COMP" == 'gzip' ]]   && missing_bin="$missing_bin\t'gzip' not found: $CONFIG_GZIP\n"
+[[ ! -x "$CONFIG_BZIP2"   && "$CONFIG_COMP" == 'bzip2' ]]  && missing_bin="$missing_bin\t'bzip2' not found: $CONFIG_BZIP2\n"
+[[ ! -x "$CONFIG_XZ"      && "$CONFIG_COMP" == 'xz' ]]     && missing_bin="$missing_bin\t'xz' not found: $CONFIG_XZ\n"
+[[ ! -x "$CONFIG_OPENSSL" && "$CONFIG_ENCRYPT" == 'yes' ]] && missing_bin="$missing_bin\t'openssl' not found: $CONFIG_OPENSSL\n"
 if [[ -n "$missing_bin" ]] ; then
   echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set." >&2
   echo "The missing files are:" >&2
@@ -160,7 +160,7 @@ OPT="--blobs"  # OPT string for use with pg_dump (format is appended below)
 [[ ! -d "$CONFIG_BACKUPDIR/weekly" ]]   && mkdir -p "$CONFIG_BACKUPDIR/weekly"
 [[ ! -d "$CONFIG_BACKUPDIR/monthly" ]]  && mkdir -p "$CONFIG_BACKUPDIR/monthly"
 [[ ! -d "$CONFIG_BACKUPDIR/logs" ]]     && mkdir -p "$CONFIG_BACKUPDIR/logs"
-if [[ "$CONFIG_LATEST" = "yes" ]] ; then
+if [[ "$CONFIG_LATEST" == "yes" ]] ; then
   [[ ! -d "$CONFIG_BACKUPDIR/latest" ]] && mkdir -p "$CONFIG_BACKUPDIR/latest"
   # cleanup previous 'latest' links
   rm -f $CONFIG_BACKUPDIR/latest/*
@@ -210,25 +210,25 @@ compression () {
   local _fname="$1"
   local _SUFFIX=""
 
-  if [[ "$CONFIG_COMP" = "gzip" ]] ; then
+  if [[ "$CONFIG_COMP" == "gzip" ]] ; then
     _SUFFIX=".gz"
     echo Backup Information for "${_fname}${_SUFFIX}"
     $CONFIG_GZIP -f "$_fname"
     $CONFIG_GZIP -l "${_fname}${_SUFFIX}"
-  elif [[ "$CONFIG_COMP" = "bzip2" ]] ; then
+  elif [[ "$CONFIG_COMP" == "bzip2" ]] ; then
     _SUFFIX=".bz2"
     echo Compression information for "${_fname}${_SUFFIX}"
     $CONFIG_BZIP2 -f -v $_fname 2>&1
-  elif [[ "$CONFIG_COMP" = "xz" ]] ; then
+  elif [[ "$CONFIG_COMP" == "xz" ]] ; then
     _SUFFIX=".xz"
     echo Compression information for "${_fname}${_SUFFIX}"
     $CONFIG_XZ --compress --force $_fname 2>&1
     $CONFIG_XZ --list ${_fname}${_SUFFIX} 2>&1
-  elif [[ "$CONFIG_COMP" = 'none' ]] && [[ "$CONFIG_DUMPFORMAT" = 'custom' ]] ; then
+  elif [[ "$CONFIG_COMP" == 'none' ]] && [[ "$CONFIG_DUMPFORMAT" == 'custom' ]] ; then
     # the 'custom' dump format compresses by default inside pg_dump if postgres
     # was built with zlib at compile time.
     echo "Using in-built compression of 'custom' format (if available)"
-  elif [[ "$CONFIG_COMP" = "none" ]] ; then
+  elif [[ "$CONFIG_COMP" == "none" ]] ; then
     echo "Using no compression"
   else
     echo "No valid compression option set, check advanced settings"
@@ -285,14 +285,14 @@ if [[ -n "$CONFIG_PREBACKUP" ]] ; then
 fi
 
 # ask pg_dump to include CREATE DATABASE in the dump output?
-if [[ "$CONFIG_CREATE_DATABASE" = "no" ]] ; then
+if [[ "$CONFIG_CREATE_DATABASE" == "no" ]] ; then
   OPT="$OPT --no-create"
 else
   OPT="$OPT --create"
 fi
 
 # Hostname for LOG information; also append socket to
-if [[ "$CONFIG_PGHOST" = "localhost" ]] ; then
+if [[ "$CONFIG_PGHOST" == "localhost" ]] ; then
   HOST="$HOSTNAME"
   [[ "$CONFIG_SOCKET" ]] && OPT="$OPT --host=$CONFIG_SOCKET"
 else
@@ -300,7 +300,7 @@ else
 fi
 
 # If backing up all DBs on the server
-if [[ "$CONFIG_DBNAMES" = "all" ]] ; then
+if [[ "$CONFIG_DBNAMES" == "all" ]] ; then
   DBNAMES=$($CONFIG_PSQL -P format=Unaligned -tqc 'SELECT datname FROM pg_database;' | sed 's/ /%/g')
 
   # If DBs are excluded
@@ -328,7 +328,7 @@ for DB in $DBNAMES ; do
   [[ ! -e "$CONFIG_BACKUPDIR/weekly/$DB" ]]   && mkdir -p "$CONFIG_BACKUPDIR/weekly/$DB"
   [[ ! -e "$CONFIG_BACKUPDIR/daily/$DB" ]]    && mkdir -p "$CONFIG_BACKUPDIR/daily/$DB"
 
-  if [[ $DOM = "01" ]] ; then
+  if [[ $DOM == "01" ]] ; then
     # Monthly Backup
     echo Monthly Backup of $DB...
     # note we never automatically delete old monthly backups
@@ -339,7 +339,7 @@ for DB in $DBNAMES ; do
     link_latest "$outfile"
     backupfiles="${backupfiles} $outfile"
     echo '----------------------------------------------------------------------'
-  elif [[ $DNOW = $DOWEEKLY ]] ; then
+  elif [[ $DNOW == $DOWEEKLY ]] ; then
     # Weekly Backup
     echo "Weekly Backup of Database '$DB'"
     echo "Rotating 5 weeks Backups..."
