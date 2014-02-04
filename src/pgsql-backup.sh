@@ -31,6 +31,9 @@ set -e  # treat any error as fatal
 # 3 = Permission Denied
 # 4 = Dependency Error
 
+# not user configurable, but set here to allow easy changing in future
+ENCRYPTION_CIPHER='aes-256-cbc'
+
 function set_config_defaults() {
   CONFIG_PGUSER='postgres'
   CONFIG_PGPASSWORD=''
@@ -242,7 +245,7 @@ function compress_file() {
 
 function encrypt_file() {
   local _fname="$1"
-  local _new_fname="${_fname}.aes-256-cbc.enc"
+  local _new_fname="${_fname}.${ENCRYPTION_CIPHER}.enc"
 
   ### are we actually configured for encyption?
   if [[ "$CONFIG_ENCRYPT" != 'yes' ]] ; then
@@ -257,7 +260,7 @@ function encrypt_file() {
   chmod 600 "$_passphrase_file"
   echo "$CONFIG_ENCRYPT_PASSPHRASE" > "$_passphrase_file"
 
-  $CONFIG_OPENSSL aes-256-cbc -a -salt -pass file:"$_passphrase_file" -in "$_fname" -out "${_new_fname}"
+  $CONFIG_OPENSSL $ENCRYPTION_CIPHER -a -salt -pass file:"$_passphrase_file" -in "$_fname" -out "${_new_fname}"
   echo "${_new_fname}"
 
   ### TODO: handle this more securely / reliably (eg, if openssl fails and
@@ -391,10 +394,7 @@ if [[ "$CONFIG_ENCRYPT" == 'yes' ]] ; then
   cat <<EOT
 !!! IMPORTANT !!!
 The output backup files have been encrypted. To decrypt them:
-  openssl aes-256-cbc -d -a -pass 'pass:XXX' -in file.enc -out file
-
-Replace "XXX" with your configured passphrase, and the filenames as
-appropriate.
+  openssl $ENCRYPTION_CIPHER -d -a -pass 'pass:XXX' -in file.enc -out file
 ======================================================================
 EOT
 fi
