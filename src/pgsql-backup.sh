@@ -20,7 +20,7 @@
 #
 
 # Version Number
-VER=0.9.12
+VER=0.9.14
 
 set -e  # treat any error as fatal
 
@@ -30,6 +30,9 @@ set -e  # treat any error as fatal
 # 2 = Configuration File Error
 # 3 = Permission Denied
 # 4 = Dependency Error
+
+# not user configurable, but set here to allow easy changing in future
+ENCRYPTION_CIPHER='aes-256-cbc'
 
 function set_config_defaults() {
   CONFIG_PGUSER='postgres'
@@ -84,6 +87,13 @@ PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 # set our default config options before we source the config file
 set_config_defaults
 
+# make sure the config file has secure permissions
+if [[ $(stat -c %a "$rc_fname") -gt 600 ]] ; then
+  echo "Configuration file permissions are too open. They should be 600 or less" >&2
+  echo "   To fix this error: chmod 600 $rc_fname" >&2
+  exit 2
+fi
+
 # Load the configuration file
 [[ ! -r "$rc_fname" ]] && { echo "Unable to read configuration file: $rc_fname; Permission Denied" >&2; exit 3; }
 source $rc_fname || { echo "Error reading configuration file: $rc_fname" >&2; exit 2; }
@@ -93,10 +103,10 @@ missing_bin=''
 [[ ! -x "$CONFIG_PG_DUMP" ]] && missing_bin="$missing_bin\t'pgdump' not found: $CONFIG_PG_DUMP\n"
 [[ ! -x "$CONFIG_PSQL" ]]    && missing_bin="$missing_bin\t'psql' not found: $CONFIG_PSQL\n"
 [[ ! -x "$CONFIG_MAILX" ]]   && missing_bin="$missing_bin\t'mail' not found: $CONFIG_MAILX\n"
-[[ ! -x "$CONFIG_GZIP"    && "$CONFIG_COMP" = 'gzip' ]]   && missing_bin="$missing_bin\t'gzip' not found: $CONFIG_GZIP\n"
-[[ ! -x "$CONFIG_BZIP2"   && "$CONFIG_COMP" = 'bzip2' ]]  && missing_bin="$missing_bin\t'bzip2' not found: $CONFIG_BZIP2\n"
-[[ ! -x "$CONFIG_XZ"      && "$CONFIG_COMP" = 'xz' ]]     && missing_bin="$missing_bin\t'xz' not found: $CONFIG_XZ\n"
-[[ ! -x "$CONFIG_OPENSSL" && "$CONFIG_ENCRYPT" = 'yes' ]] && missing_bin="$missing_bin\t'openssl' not found: $CONFIG_OPENSSL\n"
+[[ ! -x "$CONFIG_GZIP"    && "$CONFIG_COMP" == 'gzip' ]]   && missing_bin="$missing_bin\t'gzip' not found: $CONFIG_GZIP\n"
+[[ ! -x "$CONFIG_BZIP2"   && "$CONFIG_COMP" == 'bzip2' ]]  && missing_bin="$missing_bin\t'bzip2' not found: $CONFIG_BZIP2\n"
+[[ ! -x "$CONFIG_XZ"      && "$CONFIG_COMP" == 'xz' ]]     && missing_bin="$missing_bin\t'xz' not found: $CONFIG_XZ\n"
+[[ ! -x "$CONFIG_OPENSSL" && "$CONFIG_ENCRYPT" == 'yes' ]] && missing_bin="$missing_bin\t'openssl' not found: $CONFIG_OPENSSL\n"
 if [[ -n "$missing_bin" ]] ; then
   echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set." >&2
   echo "The missing files are:" >&2
@@ -156,12 +166,12 @@ OPT="--blobs"  # OPT string for use with pg_dump (format is appended below)
 [[ ! -w "$CONFIG_BACKUPDIR" ]]  && { echo "Unable to write to $CONFIG_BACKUPDIR; Aborting" >&2; exit 3; }
 
 # Create required directories
-[[ ! -d "$CONFIG_BACKUPDIR/daily" ]]    && mkdir -p "$CONFIG_BACKUPDIR/daily"
-[[ ! -d "$CONFIG_BACKUPDIR/weekly" ]]   && mkdir -p "$CONFIG_BACKUPDIR/weekly"
-[[ ! -d "$CONFIG_BACKUPDIR/monthly" ]]  && mkdir -p "$CONFIG_BACKUPDIR/monthly"
-[[ ! -d "$CONFIG_BACKUPDIR/logs" ]]     && mkdir -p "$CONFIG_BACKUPDIR/logs"
-if [[ "$CONFIG_LATEST" = "yes" ]] ; then
-  [[ ! -d "$CONFIG_BACKUPDIR/latest" ]] && mkdir -p "$CONFIG_BACKUPDIR/latest"
+[[ ! -d "$CONFIG_BACKUPDIR/daily" ]]    && mkdir "$CONFIG_BACKUPDIR/daily"
+[[ ! -d "$CONFIG_BACKUPDIR/weekly" ]]   && mkdir "$CONFIG_BACKUPDIR/weekly"
+[[ ! -d "$CONFIG_BACKUPDIR/monthly" ]]  && mkdir "$CONFIG_BACKUPDIR/monthly"
+[[ ! -d "$CONFIG_BACKUPDIR/logs" ]]     && mkdir "$CONFIG_BACKUPDIR/logs"
+if [[ "$CONFIG_LATEST" == "yes" ]] ; then
+  [[ ! -d "$CONFIG_BACKUPDIR/latest" ]] && mkdir "$CONFIG_BACKUPDIR/latest"
   # cleanup previous 'latest' links
   rm -f $CONFIG_BACKUPDIR/latest/*
 fi
@@ -199,46 +209,43 @@ exec 2> $log_stderr # stderr replaced with file $log_stderr.
 # Functions
 
 # Database dump function
-dbdump () {
+function dbdump() {
   local _args="$1"
   local _output_fname="$2"
   $CONFIG_PG_DUMP $OPT $_args > $_output_fname
   return $?
 }
 
-compression () {
+function compress_file() {
   local _fname="$1"
-  local _SUFFIX=""
+  local _suffix=""
 
-  if [[ "$CONFIG_COMP" = "gzip" ]] ; then
-    _SUFFIX=".gz"
-    echo Backup Information for "${_fname}${_SUFFIX}"
-    $CONFIG_GZIP -f "$_fname"
-    $CONFIG_GZIP -l "${_fname}${_SUFFIX}"
-  elif [[ "$CONFIG_COMP" = "bzip2" ]] ; then
-    _SUFFIX=".bz2"
-    echo Compression information for "${_fname}${_SUFFIX}"
-    $CONFIG_BZIP2 -f -v $_fname 2>&1
-  elif [[ "$CONFIG_COMP" = "xz" ]] ; then
-    _SUFFIX=".xz"
-    echo Compression information for "${_fname}${_SUFFIX}"
-    $CONFIG_XZ --compress --force $_fname 2>&1
-    $CONFIG_XZ --list ${_fname}${_SUFFIX} 2>&1
-  elif [[ "$CONFIG_COMP" = 'none' ]] && [[ "$CONFIG_DUMPFORMAT" = 'custom' ]] ; then
+  if [[ "$CONFIG_COMP" == "gzip" ]] ; then
+    _suffix=".gz"
+    $CONFIG_GZIP --force --suffix ".gz" "$_fname" 2>&1
+  elif [[ "$CONFIG_COMP" == "bzip2" ]] ; then
+    _suffix=".bz2"
+    $CONFIG_BZIP2 --compress --force $_fname 2>&1
+  elif [[ "$CONFIG_COMP" == "xz" ]] ; then
+    _suffix=".xz"
+    $CONFIG_XZ --compress --force --suffix=".xz" $_fname 2>&1
+  elif [[ "$CONFIG_COMP" == 'none' ]] && [[ "$CONFIG_DUMPFORMAT" == 'custom' ]] ; then
     # the 'custom' dump format compresses by default inside pg_dump if postgres
     # was built with zlib at compile time.
-    echo "Using in-built compression of 'custom' format (if available)"
-  elif [[ "$CONFIG_COMP" = "none" ]] ; then
-    echo "Using no compression"
+    true
+  elif [[ "$CONFIG_COMP" == "none" ]] ; then
+    true
   else
-    echo "No valid compression option set, check advanced settings"
+    echo "ERROR: No valid compression option set, Check advanced settings" >&2
+    exit 2
   fi
+  echo "${_fname}${_suffix}"
   return 0
 }
 
 function encrypt_file() {
   local _fname="$1"
-  local _new_fname="${_fname}.aes-256-cbc.enc"
+  local _new_fname="${_fname}.${ENCRYPTION_CIPHER}.enc"
 
   ### are we actually configured for encyption?
   if [[ "$CONFIG_ENCRYPT" != 'yes' ]] ; then
@@ -253,7 +260,7 @@ function encrypt_file() {
   chmod 600 "$_passphrase_file"
   echo "$CONFIG_ENCRYPT_PASSPHRASE" > "$_passphrase_file"
 
-  $CONFIG_OPENSSL aes-256-cbc -a -salt -pass file:"$_passphrase_file" -in "$_fname" -out "${_new_fname}"
+  $CONFIG_OPENSSL $ENCRYPTION_CIPHER -a -salt -pass file:"$_passphrase_file" -in "$_fname" -out "${_new_fname}"
   echo "${_new_fname}"
 
   ### TODO: handle this more securely / reliably (eg, if openssl fails and
@@ -273,10 +280,32 @@ function link_latest() {
 
 #########################################
 
+# Hostname for LOG information; also append socket to
+if [[ "$CONFIG_PGHOST" == "localhost" ]] ; then
+  HOST="$HOSTNAME"
+  [[ "$CONFIG_SOCKET" ]] && OPT="$OPT --host=$CONFIG_SOCKET"
+else
+  HOST=$CONFIG_PGHOST
+fi
+
+cat <<EOT
+===============================================================================
+Backup of PostgreSQL Database Server - $HOST
+Started $(date)
+  => PostgreSQL URI:  ${CONFIG_PGUSER}:*****@${CONFIG_PGHOST}:${CONFIG_PGPORT}/${CONFIG_PGDATABASE}
+  => Databases:       $CONFIG_DBNAMES
+       Excluding:     $CONFIG_DBEXCLUDE
+  => Dump Format:     $CONFIG_DUMPFORMAT
+  => Destination:     $CONFIG_BACKUPDIR
+  => Compression:     $CONFIG_COMP
+  => Encryption:      $CONFIG_ENCRYPT
+===============================================================================
+EOT
+
 # Run command before we begin
 if [[ -n "$CONFIG_PREBACKUP" ]] ; then
   echo ======================================================================
-  echo "Prebackup command output."
+  echo "Prebackup command output:"
   echo
   eval "$CONFIG_PREBACKUP"
   echo
@@ -285,61 +314,45 @@ if [[ -n "$CONFIG_PREBACKUP" ]] ; then
 fi
 
 # ask pg_dump to include CREATE DATABASE in the dump output?
-if [[ "$CONFIG_CREATE_DATABASE" = "no" ]] ; then
+if [[ "$CONFIG_CREATE_DATABASE" == "no" ]] ; then
   OPT="$OPT --no-create"
 else
   OPT="$OPT --create"
 fi
 
-# Hostname for LOG information; also append socket to
-if [[ "$CONFIG_PGHOST" = "localhost" ]] ; then
-  HOST="$HOSTNAME"
-  [[ "$CONFIG_SOCKET" ]] && OPT="$OPT --host=$CONFIG_SOCKET"
-else
-  HOST=$CONFIG_PGHOST
-fi
-
 # If backing up all DBs on the server
-if [[ "$CONFIG_DBNAMES" = "all" ]] ; then
+if [[ "$CONFIG_DBNAMES" == "all" ]] ; then
   DBNAMES=$($CONFIG_PSQL -P format=Unaligned -tqc 'SELECT datname FROM pg_database;' | sed 's/ /%/g')
 
   # If DBs are excluded
   for exclude in $CONFIG_DBEXCLUDE ; do
     DBNAMES=$(echo $DBNAMES | sed "s/\b$exclude\b//g")
   done
+else
+  # user has specified a list of databases to dump
+  DBNAMES="$CONFIG_DBNAMES"
 fi
 
-cat <<EOT
-======================================================================
-pgsql-backup VER $VER
-   Based on AutoMySQLBackup
-   http://sourceforge.net/projects/automysqlbackup/
-======================================================================
-Backup of PostgreSQL Database Server - $HOST
-Started $(date)
-======================================================================
-EOT
-
 for DB in $DBNAMES ; do
-  DB=$(echo $DB | sed 's/%/ /g')
-
   # Create Seperate directory for each DB
-  [[ ! -e "$CONFIG_BACKUPDIR/monthly/$DB" ]]  && mkdir -p "$CONFIG_BACKUPDIR/monthly/$DB"
-  [[ ! -e "$CONFIG_BACKUPDIR/weekly/$DB" ]]   && mkdir -p "$CONFIG_BACKUPDIR/weekly/$DB"
-  [[ ! -e "$CONFIG_BACKUPDIR/daily/$DB" ]]    && mkdir -p "$CONFIG_BACKUPDIR/daily/$DB"
+  [[ ! -d "$CONFIG_BACKUPDIR/monthly/$DB" ]]  && mkdir "$CONFIG_BACKUPDIR/monthly/$DB"
+  [[ ! -d "$CONFIG_BACKUPDIR/weekly/$DB" ]]   && mkdir "$CONFIG_BACKUPDIR/weekly/$DB"
+  [[ ! -d "$CONFIG_BACKUPDIR/daily/$DB" ]]    && mkdir "$CONFIG_BACKUPDIR/daily/$DB"
 
-  if [[ $DOM = "01" ]] ; then
+  if [[ $DOM == "01" ]] ; then
     # Monthly Backup
     echo Monthly Backup of $DB...
     # note we never automatically delete old monthly backups
     outfile="${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
     dbdump "${DB}" "$outfile"
-    compression "$outfile"
+    outfile=$(compress_file "$outfile")
     outfile=$(encrypt_file "$outfile")
     link_latest "$outfile"
+    echo "Backup written to $(basename $outfile)"
     backupfiles="${backupfiles} $outfile"
+    echo
     echo '----------------------------------------------------------------------'
-  elif [[ $DNOW = $DOWEEKLY ]] ; then
+  elif [[ $DNOW == $DOWEEKLY ]] ; then
     # Weekly Backup
     echo "Weekly Backup of Database '$DB'"
     echo "Rotating 5 weeks Backups..."
@@ -351,50 +364,47 @@ for DB in $DBNAMES ; do
       REMW="$(expr $W - 5)"
     fi
     rm -f $CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$REMW.*
-    echo
     outfile="$CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
     dbdump "$DB" "$outfile"
-    compression "$outfile"
+    outfile=$(compress_file "$outfile")
     outfile=$(encrypt_file "$outfile")
     link_latest "$outfile"
+    echo "Backup written to $(basename $outfile)"
     backupfiles="$backupfiles $outfile"
+    echo
     echo '----------------------------------------------------------------------'
   else
     # Daily Backup
     echo "Daily Backup of Database '$DB'"
     echo "Rotating last weeks Backup..."
     rm -f $CONFIG_BACKUPDIR/daily/$DB/*.$DOW.*
-    echo
     outfile="$CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
     dbdump "$DB" "$outfile"
-    compression "$outfile"
+    outfile=$(compress_file "$outfile")
     outfile=$(encrypt_file "$outfile")
     link_latest "$outfile"
+    echo "Backup written to $(basename $outfile)"
     backupfiles="$backupfiles $outfile"
+    echo
     echo '----------------------------------------------------------------------'
   fi
 done
-
-cat <<EOT
-Backup End $(date)
-======================================================================
-Total disk space used for backup storage..
-Size - Location
-$(du -hs "$CONFIG_BACKUPDIR")
-======================================================================
-EOT
 
 if [[ "$CONFIG_ENCRYPT" == 'yes' ]] ; then
   cat <<EOT
 !!! IMPORTANT !!!
 The output backup files have been encrypted. To decrypt them:
-  openssl aes-256-cbc -d -a -pass 'pass:XXX' -in file.enc -out file
-
-Replace "XXX" with your configured passphrase, and the filenames as
-appropriate.
+  openssl $ENCRYPTION_CIPHER -d -a -pass 'pass:XXX' -in file.enc -out file
 ======================================================================
 EOT
 fi
+
+cat <<EOT
+Total disk space used for backup storage:
+$(du -h --max-depth=1 "$CONFIG_BACKUPDIR")
+======================================================================
+pgsql-backup $VER - http://github.com/fukawi2/pgsql-backup
+EOT
 
 # Run command when we're done
 if [[ -n "$CONFIG_POSTBACKUP" ]] ; then
@@ -435,7 +445,7 @@ case "$CONFIG_MAILCONTENT" in
     $CONFIG_MAILX -s "ERRORS REPORTED: PostgreSQL Backup error Log for $HOST - $FULLDATE" $CONFIG_MAILADDR <<EOT
 =============================================
 !!!!!! WARNING !!!!!!
-Errors reported during AutoPostgreSQLBackup execution... BACKUP FAILED.
+Errors reported during pgsql-backup execution... BACKUP FAILED.
 $(cat $log_stderr)
 =============================================
 Full Log Below
@@ -450,7 +460,7 @@ EOT
     cat <<EOT
 =============================================
 !!!!!! WARNING !!!!!!
-Errors reported during AutoPostgreSQLBackup execution... BACKUP FAILED.
+Errors reported during pgsql-backup execution... BACKUP FAILED.
 $(cat $log_stderr)
 =============================================
 Full Log Below
