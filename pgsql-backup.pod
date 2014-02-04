@@ -55,7 +55,7 @@ The password required for the username specified above.
 
 Type:     String
 
-Default:  
+Default:
 
 =head2 CONFIG_PGHOST
 
@@ -105,7 +105,7 @@ first backup is run. Any missing subdirectories will be created as required.
 
 Type:     String
 
-Default:  
+Default:
 
 =head2 CONFIG_MAILCONTENT
 
@@ -152,7 +152,7 @@ databases.
 
 Type:     String
 
-Default:  
+Default:
 
 =head2 CONFIG_CREATE_DATABASE
 
@@ -230,7 +230,7 @@ this option is set non-empty, it will override the CONFIG_PGHOST setting.
 
 Type:     String
 
-Default:  
+Default:
 
 =head2 CONFIG_DUMPFORMAT
 
@@ -319,7 +319,7 @@ affecting things other than backups.
 
 =head1 HOOKS
 
-The script has 2 hooks available for you to incorporate custom actions: 
+The script has 2 hooks available for you to incorporate custom actions:
 C<PREBACKUP> and C<POSTBACKUP>
 
 The command specified in POSTBACKUP will be executed after the dumps are
