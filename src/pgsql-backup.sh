@@ -328,8 +328,6 @@ Started $(date)
 EOT
 
 for DB in $DBNAMES ; do
-  DB=$(echo $DB | sed 's/%/ /g')
-
   # Create Seperate directory for each DB
   [[ ! -e "$CONFIG_BACKUPDIR/monthly/$DB" ]]  && mkdir -p "$CONFIG_BACKUPDIR/monthly/$DB"
   [[ ! -e "$CONFIG_BACKUPDIR/weekly/$DB" ]]   && mkdir -p "$CONFIG_BACKUPDIR/weekly/$DB"
