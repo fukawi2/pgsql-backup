@@ -130,6 +130,7 @@ declare -r CONFIG_GZIP
 declare -r CONFIG_BZIP2
 declare -r CONFIG_MAILX
 declare -r CONFIG_UMASK
+declare -r CONFIG_XZ
 declare -r CONFIG_ENCRYPT
 declare -r CONFIG_ENCRYPT_PASSPHRASE
 
