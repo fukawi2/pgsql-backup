@@ -440,7 +440,7 @@ case "$CONFIG_MAILCONTENT" in
     $CONFIG_MAILX -s "ERRORS REPORTED: PostgreSQL Backup error Log for $HOST - $FULLDATE" $CONFIG_MAILADDR <<EOT
 =============================================
 !!!!!! WARNING !!!!!!
-Errors reported during AutoPostgreSQLBackup execution... BACKUP FAILED.
+Errors reported during pgsql-backup execution... BACKUP FAILED.
 $(cat $log_stderr)
 =============================================
 Full Log Below
@@ -455,7 +455,7 @@ EOT
     cat <<EOT
 =============================================
 !!!!!! WARNING !!!!!!
-Errors reported during AutoPostgreSQLBackup execution... BACKUP FAILED.
+Errors reported during pgsql-backup execution... BACKUP FAILED.
 $(cat $log_stderr)
 =============================================
 Full Log Below
