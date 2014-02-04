@@ -213,33 +213,30 @@ dbdump () {
   return $?
 }
 
-compression () {
+function compress_file() {
   local _fname="$1"
-  local _SUFFIX=""
+  local _suffix=""
 
   if [[ "$CONFIG_COMP" == "gzip" ]] ; then
-    _SUFFIX=".gz"
-    echo Backup Information for "${_fname}${_SUFFIX}"
-    $CONFIG_GZIP -f "$_fname"
-    $CONFIG_GZIP -l "${_fname}${_SUFFIX}"
+    _suffix="gz"
+    $CONFIG_GZIP --force --suffix ".gz" "$_fname" 2>&1
   elif [[ "$CONFIG_COMP" == "bzip2" ]] ; then
-    _SUFFIX=".bz2"
-    echo Compression information for "${_fname}${_SUFFIX}"
-    $CONFIG_BZIP2 -f -v $_fname 2>&1
+    _suffix="bz2"
+    $CONFIG_BZIP2 --compress --force $_fname 2>&1
   elif [[ "$CONFIG_COMP" == "xz" ]] ; then
-    _SUFFIX=".xz"
-    echo Compression information for "${_fname}${_SUFFIX}"
-    $CONFIG_XZ --compress --force $_fname 2>&1
-    $CONFIG_XZ --list ${_fname}${_SUFFIX} 2>&1
+    _suffix="xz"
+    $CONFIG_XZ --compress --force --suffix=".xz" $_fname 2>&1
   elif [[ "$CONFIG_COMP" == 'none' ]] && [[ "$CONFIG_DUMPFORMAT" == 'custom' ]] ; then
     # the 'custom' dump format compresses by default inside pg_dump if postgres
     # was built with zlib at compile time.
-    echo "Using in-built compression of 'custom' format (if available)"
+    true
   elif [[ "$CONFIG_COMP" == "none" ]] ; then
-    echo "Using no compression"
+    true
   else
-    echo "No valid compression option set, check advanced settings"
+    echo "ERROR: No valid compression option set, check advanced settings" >&2
+    exit 2
   fi
+  echo "${_fname}.${_suffix}"
   return 0
 }
 
@@ -341,7 +338,7 @@ for DB in $DBNAMES ; do
     # note we never automatically delete old monthly backups
     outfile="${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
     dbdump "${DB}" "$outfile"
-    compression "$outfile"
+    outfile=$(compress_file "$outfile")
     outfile=$(encrypt_file "$outfile")
     link_latest "$outfile"
     backupfiles="${backupfiles} $outfile"
@@ -361,7 +358,7 @@ for DB in $DBNAMES ; do
     echo
     outfile="$CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
     dbdump "$DB" "$outfile"
-    compression "$outfile"
+    outfile=$(compress_file "$outfile")
     outfile=$(encrypt_file "$outfile")
     link_latest "$outfile"
     backupfiles="$backupfiles $outfile"
@@ -374,7 +371,7 @@ for DB in $DBNAMES ; do
     echo
     outfile="$CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
     dbdump "$DB" "$outfile"
-    compression "$outfile"
+    outfile=$(compress_file "$outfile")
     outfile=$(encrypt_file "$outfile")
     link_latest "$outfile"
     backupfiles="$backupfiles $outfile"
