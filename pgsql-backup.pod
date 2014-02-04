@@ -381,7 +381,7 @@ L<http://sourceforge.net/projects/automysqlbackup/>
 
 =head1 LICENSE
 
-Copyright 2010-2013 Phillip Smith
+Copyright 2010-2014 Phillip Smith
 
 Made available under the conditions of the GPLv2. This is free software; refer
 to the F<LICENSE> file for details.
