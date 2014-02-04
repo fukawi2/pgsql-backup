@@ -311,6 +311,9 @@ if [[ "$CONFIG_DBNAMES" == "all" ]] ; then
   for exclude in $CONFIG_DBEXCLUDE ; do
     DBNAMES=$(echo $DBNAMES | sed "s/\b$exclude\b//g")
   done
+else
+  # user has specified a list of databases to dump
+  DBNAMES="$CONFIG_DBNAMES"
 fi
 
 cat <<EOT
