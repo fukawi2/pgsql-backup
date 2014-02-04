@@ -84,6 +84,13 @@ PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 # set our default config options before we source the config file
 set_config_defaults
 
+# make sure the config file has secure permissions
+if [[ $(stat -c %a "$rc_fname") -gt 600 ]] ; then
+  echo "Configuration file permissions are too open. They should be 600 or less" >&2
+  echo "   To fix this error: chmod 600 $rc_fname" >&2
+  exit 2
+fi
+
 # Load the configuration file
 [[ ! -r "$rc_fname" ]] && { echo "Unable to read configuration file: $rc_fname; Permission Denied" >&2; exit 3; }
 source $rc_fname || { echo "Error reading configuration file: $rc_fname" >&2; exit 2; }
