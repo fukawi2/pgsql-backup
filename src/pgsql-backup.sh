@@ -218,7 +218,7 @@ compression () {
     SUFFIX=".xz"
     echo Compression information for "${_fname}${SUFFIX}"
     $CONFIG_XZ --compress --force $_fname 2>&1
-    $CONFIG_XZ--list ${_fname}${SUFFIX} 2>&1
+    $CONFIG_XZ --list ${_fname}${SUFFIX} 2>&1
   elif [[ "$CONFIG_COMP" = 'none' ]] && [[ "$CONFIG_DUMPFORMAT" = 'custom' ]] ; then
     # the 'custom' dump format compresses by default inside pg_dump if postgres
     # was built with zlib at compile time.
