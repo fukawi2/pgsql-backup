@@ -401,7 +401,7 @@ fi
 
 cat <<EOT
 Total disk space used for backup storage:
-$(du -hs "$CONFIG_BACKUPDIR")
+$(du -h --max-depth=1 "$CONFIG_BACKUPDIR")
 ======================================================================
 pgsql-backup $VER - http://github.com/fukawi2/pgsql-backup
 EOT
