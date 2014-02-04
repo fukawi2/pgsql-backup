@@ -163,12 +163,12 @@ OPT="--blobs"  # OPT string for use with pg_dump (format is appended below)
 [[ ! -w "$CONFIG_BACKUPDIR" ]]  && { echo "Unable to write to $CONFIG_BACKUPDIR; Aborting" >&2; exit 3; }
 
 # Create required directories
-[[ ! -d "$CONFIG_BACKUPDIR/daily" ]]    && mkdir -p "$CONFIG_BACKUPDIR/daily"
-[[ ! -d "$CONFIG_BACKUPDIR/weekly" ]]   && mkdir -p "$CONFIG_BACKUPDIR/weekly"
-[[ ! -d "$CONFIG_BACKUPDIR/monthly" ]]  && mkdir -p "$CONFIG_BACKUPDIR/monthly"
-[[ ! -d "$CONFIG_BACKUPDIR/logs" ]]     && mkdir -p "$CONFIG_BACKUPDIR/logs"
+[[ ! -d "$CONFIG_BACKUPDIR/daily" ]]    && mkdir "$CONFIG_BACKUPDIR/daily"
+[[ ! -d "$CONFIG_BACKUPDIR/weekly" ]]   && mkdir "$CONFIG_BACKUPDIR/weekly"
+[[ ! -d "$CONFIG_BACKUPDIR/monthly" ]]  && mkdir "$CONFIG_BACKUPDIR/monthly"
+[[ ! -d "$CONFIG_BACKUPDIR/logs" ]]     && mkdir "$CONFIG_BACKUPDIR/logs"
 if [[ "$CONFIG_LATEST" == "yes" ]] ; then
-  [[ ! -d "$CONFIG_BACKUPDIR/latest" ]] && mkdir -p "$CONFIG_BACKUPDIR/latest"
+  [[ ! -d "$CONFIG_BACKUPDIR/latest" ]] && mkdir "$CONFIG_BACKUPDIR/latest"
   # cleanup previous 'latest' links
   rm -f $CONFIG_BACKUPDIR/latest/*
 fi
