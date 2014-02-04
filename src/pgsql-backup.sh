@@ -221,13 +221,13 @@ function compress_file() {
   local _suffix=""
 
   if [[ "$CONFIG_COMP" == "gzip" ]] ; then
-    _suffix="gz"
+    _suffix=".gz"
     $CONFIG_GZIP --force --suffix ".gz" "$_fname" 2>&1
   elif [[ "$CONFIG_COMP" == "bzip2" ]] ; then
-    _suffix="bz2"
+    _suffix=".bz2"
     $CONFIG_BZIP2 --compress --force $_fname 2>&1
   elif [[ "$CONFIG_COMP" == "xz" ]] ; then
-    _suffix="xz"
+    _suffix=".xz"
     $CONFIG_XZ --compress --force --suffix=".xz" $_fname 2>&1
   elif [[ "$CONFIG_COMP" == 'none' ]] && [[ "$CONFIG_DUMPFORMAT" == 'custom' ]] ; then
     # the 'custom' dump format compresses by default inside pg_dump if postgres
@@ -236,10 +236,10 @@ function compress_file() {
   elif [[ "$CONFIG_COMP" == "none" ]] ; then
     true
   else
-    echo "ERROR: No valid compression option set, check advanced settings" >&2
+    echo "ERROR: No valid compression option set, Check advanced settings" >&2
     exit 2
   fi
-  echo "${_fname}.${_suffix}"
+  echo "${_fname}${_suffix}"
   return 0
 }
 
