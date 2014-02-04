@@ -20,7 +20,7 @@
 #
 
 # Version Number
-VER=0.9.12
+VER=0.9.14
 
 set -e  # treat any error as fatal
 
