@@ -200,25 +200,24 @@ dbdump () {
   return $?
 }
 
-# Compression function plus latest copy
-SUFFIX=""
 compression () {
   local _fname="$1"
+  local _SUFFIX=""
 
   if [[ "$CONFIG_COMP" = "gzip" ]] ; then
-    SUFFIX=".gz"
-    echo Backup Information for "${_fname}${SUFFIX}"
+    _SUFFIX=".gz"
+    echo Backup Information for "${_fname}${_SUFFIX}"
     $CONFIG_GZIP -f "$_fname"
-    $CONFIG_GZIP -l "${_fname}${SUFFIX}"
+    $CONFIG_GZIP -l "${_fname}${_SUFFIX}"
   elif [[ "$CONFIG_COMP" = "bzip2" ]] ; then
-    SUFFIX=".bz2"
-    echo Compression information for "${_fname}${SUFFIX}"
+    _SUFFIX=".bz2"
+    echo Compression information for "${_fname}${_SUFFIX}"
     $CONFIG_BZIP2 -f -v $_fname 2>&1
   elif [[ "$CONFIG_COMP" = "xz" ]] ; then
-    SUFFIX=".xz"
-    echo Compression information for "${_fname}${SUFFIX}"
+    _SUFFIX=".xz"
+    echo Compression information for "${_fname}${_SUFFIX}"
     $CONFIG_XZ --compress --force $_fname 2>&1
-    $CONFIG_XZ --list ${_fname}${SUFFIX} 2>&1
+    $CONFIG_XZ --list ${_fname}${_SUFFIX} 2>&1
   elif [[ "$CONFIG_COMP" = 'none' ]] && [[ "$CONFIG_DUMPFORMAT" = 'custom' ]] ; then
     # the 'custom' dump format compresses by default inside pg_dump if postgres
     # was built with zlib at compile time.
