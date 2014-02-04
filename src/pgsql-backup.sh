@@ -206,7 +206,7 @@ exec 2> $log_stderr # stderr replaced with file $log_stderr.
 # Functions
 
 # Database dump function
-dbdump () {
+function dbdump() {
   local _args="$1"
   local _output_fname="$2"
   $CONFIG_PG_DUMP $OPT $_args > $_output_fname
