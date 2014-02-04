@@ -20,7 +20,7 @@
 #
 
 # Version Number
-VER=0.9.10
+VER=0.9.11
 
 set -e  # treat any error as fatal
 
@@ -52,12 +52,15 @@ function set_config_defaults() {
   CONFIG_UMASK='0077'
   CONFIG_PREBACKUP=''
   CONFIG_POSTBACKUP=''
+  CONFIG_ENCRYPT=no
 
   CONFIG_PG_DUMP=$(which pg_dump 2> /dev/null || true)
   CONFIG_PSQL=$(which psql 2> /dev/null || true)
   CONFIG_MAILX=$(which mail 2> /dev/null || true)
   CONFIG_GZIP=$(which gzip  2> /dev/null || true)
   CONFIG_BZIP2=$(which bzip2 2> /dev/null || true)
+  CONFIG_XZ=$(which xz 2> /dev/null || true)
+  CONFIG_OPENSSL=$(which openssl 2> /dev/null || true)
 }
 
 # Path to options file
@@ -90,9 +93,10 @@ missing_bin=''
 [[ ! -x "$CONFIG_PG_DUMP" ]] && missing_bin="$missing_bin\t'pgdump' not found: $CONFIG_PG_DUMP\n"
 [[ ! -x "$CONFIG_PSQL" ]]    && missing_bin="$missing_bin\t'psql' not found: $CONFIG_PSQL\n"
 [[ ! -x "$CONFIG_MAILX" ]]   && missing_bin="$missing_bin\t'mail' not found: $CONFIG_MAILX\n"
-[[ ! -x "$CONFIG_GZIP"  && "$CONFIG_COMP" = 'gzip' ]]   && missing_bin="$missing_bin\t'gzip' not found: $CONFIG_GZIP\n"
-[[ ! -x "$CONFIG_BZIP2" && "$CONFIG_COMP" = 'bzip2' ]]  && missing_bin="$missing_bin\t'bzip2' not found: $CONFIG_BZIP2\n"
-[[ ! -x "$CONFIG_XZ"    && "$CONFIG_COMP" = 'xz' ]]     && missing_bin="$missing_bin\t'xz' not found: $CONFIG_xz2\n"
+[[ ! -x "$CONFIG_GZIP"    && "$CONFIG_COMP" = 'gzip' ]]   && missing_bin="$missing_bin\t'gzip' not found: $CONFIG_GZIP\n"
+[[ ! -x "$CONFIG_BZIP2"   && "$CONFIG_COMP" = 'bzip2' ]]  && missing_bin="$missing_bin\t'bzip2' not found: $CONFIG_BZIP2\n"
+[[ ! -x "$CONFIG_XZ"      && "$CONFIG_COMP" = 'xz' ]]     && missing_bin="$missing_bin\t'xz' not found: $CONFIG_XZ\n"
+[[ ! -x "$CONFIG_OPENSSL" && "$CONFIG_ENCRYPT" = 'yes' ]] && missing_bin="$missing_bin\t'openssl' not found: $CONFIG_OPENSSL\n"
 if [[ -n "$missing_bin" ]] ; then
   echo "Some required programs were not found. Please check $rc_fname to ensure correct paths are set." >&2
   echo "The missing files are:" >&2
@@ -126,6 +130,9 @@ declare -r CONFIG_GZIP
 declare -r CONFIG_BZIP2
 declare -r CONFIG_MAILX
 declare -r CONFIG_UMASK
+declare -r CONFIG_XZ
+declare -r CONFIG_ENCRYPT
+declare -r CONFIG_ENCRYPT_PASSPHRASE
 
 # export PG environment variables for libpq
 export PGUSER="$CONFIG_PGUSER"
@@ -199,25 +206,24 @@ dbdump () {
   return $?
 }
 
-# Compression function plus latest copy
-SUFFIX=""
 compression () {
   local _fname="$1"
+  local _SUFFIX=""
 
   if [[ "$CONFIG_COMP" = "gzip" ]] ; then
-    SUFFIX=".gz"
-    echo Backup Information for "${_fname}${SUFFIX}"
+    _SUFFIX=".gz"
+    echo Backup Information for "${_fname}${_SUFFIX}"
     $CONFIG_GZIP -f "$_fname"
-    $CONFIG_GZIP -l "${_fname}${SUFFIX}"
+    $CONFIG_GZIP -l "${_fname}${_SUFFIX}"
   elif [[ "$CONFIG_COMP" = "bzip2" ]] ; then
-    SUFFIX=".bz2"
-    echo Compression information for "${_fname}${SUFFIX}"
+    _SUFFIX=".bz2"
+    echo Compression information for "${_fname}${_SUFFIX}"
     $CONFIG_BZIP2 -f -v $_fname 2>&1
   elif [[ "$CONFIG_COMP" = "xz" ]] ; then
-    SUFFIX=".xz"
-    echo Compression information for "${_fname}${SUFFIX}"
+    _SUFFIX=".xz"
+    echo Compression information for "${_fname}${_SUFFIX}"
     $CONFIG_XZ --compress --force $_fname 2>&1
-    $CONFIG_XZ--list ${_fname}${SUFFIX} 2>&1
+    $CONFIG_XZ --list ${_fname}${_SUFFIX} 2>&1
   elif [[ "$CONFIG_COMP" = 'none' ]] && [[ "$CONFIG_DUMPFORMAT" = 'custom' ]] ; then
     # the 'custom' dump format compresses by default inside pg_dump if postgres
     # was built with zlib at compile time.
@@ -227,8 +233,40 @@ compression () {
   else
     echo "No valid compression option set, check advanced settings"
   fi
-  if [[ "$CONFIG_LATEST" = "yes" ]] ; then
-    ln -f ${_fname}${SUFFIX} "$CONFIG_BACKUPDIR/latest/"
+  return 0
+}
+
+function encrypt_file() {
+  local _fname="$1"
+  local _new_fname="${_fname}.aes-256-cbc.enc"
+
+  ### are we actually configured for encyption?
+  if [[ "$CONFIG_ENCRYPT" != 'yes' ]] ; then
+    echo "$_fname"
+    return 0
+  fi
+
+  # we want to store the passphrase in a temporary file rather than
+  # pass it to openssl on the command line where it would be visible
+  # in the process tree
+  local _passphrase_file=$(mktemp "$CONFIG_BACKUPDIR/.opensslpass.XXXX")
+  chmod 600 "$_passphrase_file"
+  echo "$CONFIG_ENCRYPT_PASSPHRASE" > "$_passphrase_file"
+
+  $CONFIG_OPENSSL aes-256-cbc -a -salt -pass file:"$_passphrase_file" -in "$_fname" -out "${_new_fname}"
+  echo "${_new_fname}"
+
+  ### TODO: handle this more securely / reliably (eg, if openssl fails and
+  ###       bash aborts us before getting here) Probably need to use an
+  ###       exit hook with a cleanup function?
+  rm -f "$_passphrase_file" "$_fname"
+  return 0
+}
+
+function link_latest() {
+  local _fname="$1"
+  if [[ "$CONFIG_LATEST" == 'yes' ]] ; then
+    ln -f "${_fname}" "$CONFIG_BACKUPDIR/latest/"
   fi
   return 0
 }
@@ -294,9 +332,12 @@ for DB in $DBNAMES ; do
     # Monthly Backup
     echo Monthly Backup of $DB...
     # note we never automatically delete old monthly backups
-    dbdump "${DB}" "${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
-    compression "${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
-    backupfiles="${backupfiles} ${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${DB}.${OUTEXT}${SUFFIX}"
+    outfile="${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
+    dbdump "${DB}" "$outfile"
+    compression "$outfile"
+    outfile=$(encrypt_file "$outfile")
+    link_latest "$outfile"
+    backupfiles="${backupfiles} $outfile"
     echo '----------------------------------------------------------------------'
   elif [[ $DNOW = $DOWEEKLY ]] ; then
     # Weekly Backup
@@ -311,9 +352,12 @@ for DB in $DBNAMES ; do
     fi
     rm -f $CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$REMW.*
     echo
-    dbdump "$DB" "$CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
-    compression "$CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
-    backupfiles="$backupfiles $CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}$SUFFIX"
+    outfile="$CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
+    dbdump "$DB" "$outfile"
+    compression "$outfile"
+    outfile=$(encrypt_file "$outfile")
+    link_latest "$outfile"
+    backupfiles="$backupfiles $outfile"
     echo '----------------------------------------------------------------------'
   else
     # Daily Backup
@@ -321,9 +365,12 @@ for DB in $DBNAMES ; do
     echo "Rotating last weeks Backup..."
     rm -f $CONFIG_BACKUPDIR/daily/$DB/*.$DOW.*
     echo
-    dbdump "$DB" "$CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
-    compression "$CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
-    backupfiles="$backupfiles $CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}$SUFFIX"
+    outfile="$CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
+    dbdump "$DB" "$outfile"
+    compression "$outfile"
+    outfile=$(encrypt_file "$outfile")
+    link_latest "$outfile"
+    backupfiles="$backupfiles $outfile"
     echo '----------------------------------------------------------------------'
   fi
 done
@@ -336,6 +383,18 @@ Size - Location
 $(du -hs "$CONFIG_BACKUPDIR")
 ======================================================================
 EOT
+
+if [[ "$CONFIG_ENCRYPT" == 'yes' ]] ; then
+  cat <<EOT
+!!! IMPORTANT !!!
+The output backup files have been encrypted. To decrypt them:
+  openssl aes-256-cbc -d -a -pass 'pass:XXX' -in file.enc -out file
+
+Replace "XXX" with your configured passphrase, and the filenames as
+appropriate.
+======================================================================
+EOT
+fi
 
 # Run command when we're done
 if [[ -n "$CONFIG_POSTBACKUP" ]] ; then
