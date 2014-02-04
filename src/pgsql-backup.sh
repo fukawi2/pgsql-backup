@@ -329,9 +329,9 @@ EOT
 
 for DB in $DBNAMES ; do
   # Create Seperate directory for each DB
-  [[ ! -e "$CONFIG_BACKUPDIR/monthly/$DB" ]]  && mkdir -p "$CONFIG_BACKUPDIR/monthly/$DB"
-  [[ ! -e "$CONFIG_BACKUPDIR/weekly/$DB" ]]   && mkdir -p "$CONFIG_BACKUPDIR/weekly/$DB"
-  [[ ! -e "$CONFIG_BACKUPDIR/daily/$DB" ]]    && mkdir -p "$CONFIG_BACKUPDIR/daily/$DB"
+  [[ ! -d "$CONFIG_BACKUPDIR/monthly/$DB" ]]  && mkdir "$CONFIG_BACKUPDIR/monthly/$DB"
+  [[ ! -d "$CONFIG_BACKUPDIR/weekly/$DB" ]]   && mkdir "$CONFIG_BACKUPDIR/weekly/$DB"
+  [[ ! -d "$CONFIG_BACKUPDIR/daily/$DB" ]]    && mkdir "$CONFIG_BACKUPDIR/daily/$DB"
 
   if [[ $DOM == "01" ]] ; then
     # Monthly Backup
