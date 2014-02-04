@@ -186,6 +186,30 @@ Type:     C<gzip> or C<bzip2> or C<xz> or C<none>
 
 Default:  none
 
+=head2 CONFIG_ENCRYPT
+
+Whether to encrypt the output backup files. If enabled, you must also specify
+C<CONFIG_ENCRYPT_PASSPHRASE> which is the passphrase to use for encryption. The
+encryption process is handled by openssl and uses the AES-256-CBC cipher. The
+appropriate command to decrypt the archives will be included in the backup log
+of each run (excluding the passphrase of course) for reference.
+
+Type:     C<yes> or C<no>
+
+Default:  no
+
+=head2 CONFIG_ENCRYPT_PASSPHRASE
+
+The passphrase to be used when C<CONFIG_ENCRYPT> is set to C<yes>. Make sure
+this passphrase is stored securely to be able to decrypt in the event you need
+to restore backups. Without the passphrase, you will NOT be able to restore
+your backups. Wrap the value in quotes if it includes any whitespace (normal
+bash string quoting rules apply).
+
+Type:     String
+
+Default:
+
 =head2 CONFIG_LATEST
 
 If set to '1' the script will create a directory in BACKUPDIR called C<latest>
