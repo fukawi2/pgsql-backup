@@ -36,7 +36,7 @@ bin: test src/$(PROJECT).sh
 
 config: pgsql-backup.conf
 	# Install (without overwriting) configuration files
-	[[ -e $(DESTDIR)$(D_CNF)/pgsql-backup.conf ]] || \
+	[ -e $(DESTDIR)$(D_CNF)/pgsql-backup.conf ] || \
 		install -D -m 0644 $(PROJECT).conf $(DESTDIR)$(D_CNF)/pgsql-backup.conf
 
 docs: $(PROJECT).pod
