@@ -273,7 +273,7 @@ function encrypt_file() {
 function link_latest() {
   local _fname="$1"
   if [[ "$CONFIG_LATEST" == 'yes' ]] ; then
-    ln -f "${_fname}" "$CONFIG_BACKUPDIR/latest/"
+    ln -sf "${_fname}" "$CONFIG_BACKUPDIR/latest/"
   fi
   return 0
 }
