@@ -371,14 +371,6 @@ for DB in $DBNAMES ; do
     echo Monthly Backup of $DB...
     # note we never automatically delete old monthly backups
     outfile="${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
-    dbdump "${DB}" "$outfile"
-    outfile=$(compress_file "$outfile")
-    outfile=$(encrypt_file "$outfile")
-    link_latest "$outfile"
-    echo "Backup written to $(basename $outfile)"
-    backupfiles="${backupfiles} $outfile"
-    echo
-    echo '----------------------------------------------------------------------'
   elif [[ -n "$write_weekly" ]] ; then
     # Weekly Backup
     echo "Weekly Backup of Database '$DB'"
@@ -392,33 +384,27 @@ for DB in $DBNAMES ; do
     fi
     rm -f $CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$REMW.*
     outfile="$CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
-    dbdump "$DB" "$outfile"
-    outfile=$(compress_file "$outfile")
-    outfile=$(encrypt_file "$outfile")
-    link_latest "$outfile"
-    echo "Backup written to $(basename $outfile)"
-    backupfiles="$backupfiles $outfile"
-    echo
-    echo '----------------------------------------------------------------------'
   elif [[ -n "$write_daily" ]] ; then
     # Daily Backup
     echo "Daily Backup of Database '$DB'"
     echo "Rotating last weeks Backup..."
     rm -f $CONFIG_BACKUPDIR/daily/$DB/*.$DOW.*
     outfile="$CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
-    dbdump "$DB" "$outfile"
-    outfile=$(compress_file "$outfile")
-    outfile=$(encrypt_file "$outfile")
-    link_latest "$outfile"
-    echo "Backup written to $(basename $outfile)"
-    backupfiles="$backupfiles $outfile"
-    echo
-    echo '----------------------------------------------------------------------'
   else
     # this is a bug if we get here
     echo "Ooops! Bug detected."
     exit -1
   fi
+
+  # do the dump now we know where to write to
+  dbdump "${DB}" "$outfile"
+  outfile=$(compress_file "$outfile")
+  outfile=$(encrypt_file "$outfile")
+  link_latest "$outfile"
+  echo "Backup written to $(basename $outfile)"
+  backupfiles="${backupfiles} $outfile"
+  echo
+  echo '----------------------------------------------------------------------'
 done
 
 # dump globals (eg, login roles etc)
