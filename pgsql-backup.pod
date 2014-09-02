@@ -350,7 +350,7 @@ A sample hook is included: F<hook-postbackup.sh>
 Database dumps created by this script are unencrypted by default; you should
 take into consideration the following (incomplete list) of implications,
 especially if your database(s) store sensitive information such as usernames,
-passwords, credit card details or other personal information (espeically those
+passwords, credit card details or other personal information (especially those
 of your customers).
 
 =over 4
