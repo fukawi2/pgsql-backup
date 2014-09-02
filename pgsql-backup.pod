@@ -168,6 +168,16 @@ Type:     C<yes> or C<no>
 
 Default:  yes
 
+=head2 CONFIG_DUMP_GLOBALS
+
+Make a dump of the PostgreSQL globals (ie login roles). If set to C<yes> then
+pg_dumpall (NOT pg_dump) is called with with C<--globals-only> flag and output
+is saved to a distinct file in the C<CONFIG_BACKUPDIR> path.
+
+Type:     C<yes> or C<no>
+
+Default:  yes
+
 =head2 CONFIG_DOWEEKLY
 
 Which day to create a weekly archive of the dumps. Use '0' to not do weekly
