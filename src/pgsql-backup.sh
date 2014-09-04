@@ -58,14 +58,14 @@ function set_config_defaults() {
   CONFIG_POSTBACKUP=''
   CONFIG_ENCRYPT=no
 
-  CONFIG_PG_DUMP=$(which pg_dump 2> /dev/null || true)
-  CONFIG_PG_DUMPALL=$(which pg_dumpall 2> /dev/null || true)
-  CONFIG_PSQL=$(which psql 2> /dev/null || true)
-  CONFIG_MAILX=$(which mail 2> /dev/null || true)
-  CONFIG_GZIP=$(which gzip  2> /dev/null || true)
-  CONFIG_BZIP2=$(which bzip2 2> /dev/null || true)
-  CONFIG_XZ=$(which xz 2> /dev/null || true)
-  CONFIG_OPENSSL=$(which openssl 2> /dev/null || true)
+  CONFIG_PG_DUMP=$(command -v pg_dump || true)
+  CONFIG_PG_DUMPALL=$(command -v pg_dumpall || true)
+  CONFIG_PSQL=$(command -v psql || true)
+  CONFIG_MAILX=$(command -v mail || true)
+  CONFIG_GZIP=$(command -v gzip || true)
+  CONFIG_BZIP2=$(command -v bzip2 || true)
+  CONFIG_XZ=$(command -v xz || true)
+  CONFIG_OPENSSL=$(command -v openssl || true)
 }
 
 # Path to options file
