@@ -120,6 +120,14 @@ fi
 # strip any trailing slash from BACKUPDIR
 CONFIG_BACKUPDIR="${CONFIG_BACKUPDIR%/}"
 
+# we need a temporary directory to work with and we'll throw in
+# an EXIT hook to make sure it is cleaned up when we're finished
+function cleanup() {
+  rm -Rf "$TEMP_PATH"
+}
+declare -r TEMP_PATH=$(mktemp -d --tmpdir '.pgsqlbup.XXXX')
+trap cleanup EXIT
+
 # set our umask
 umask $CONFIG_UMASK
 
@@ -175,7 +183,6 @@ declare PG_DUMPALL_OPTS=""        # options for use with pg_dumpall
 [[ ! -d "$CONFIG_BACKUPDIR/daily" ]]    && mkdir "$CONFIG_BACKUPDIR/daily"
 [[ ! -d "$CONFIG_BACKUPDIR/weekly" ]]   && mkdir "$CONFIG_BACKUPDIR/weekly"
 [[ ! -d "$CONFIG_BACKUPDIR/monthly" ]]  && mkdir "$CONFIG_BACKUPDIR/monthly"
-[[ ! -d "$CONFIG_BACKUPDIR/logs" ]]     && mkdir "$CONFIG_BACKUPDIR/logs"
 if [[ "$CONFIG_LATEST" == "yes" ]] ; then
   [[ ! -d "$CONFIG_BACKUPDIR/latest" ]] && mkdir "$CONFIG_BACKUPDIR/latest"
   # cleanup previous 'latest' links
@@ -202,8 +209,8 @@ esac
 PG_DUMP_OPTS="$PG_DUMP_OPTS --format=${CONFIG_DUMPFORMAT}"
 
 # IO redirection for logging.
-log_stdout=$(mktemp "$CONFIG_BACKUPDIR/logs/$CONFIG_PGHOST-$$-log.XXXX") # Logfile Name
-log_stderr=$(mktemp "$CONFIG_BACKUPDIR/logs/$CONFIG_PGHOST-$$-err.XXXX") # Error Logfile Name
+log_stdout="$TEMP_PATH/$CONFIG_PGHOST-$$.log" # Logfile Name
+log_stderr="$TEMP_PATH/$CONFIG_PGHOST-$$.err" # Error Logfile Name
 touch $log_stdout
 exec 6>&1           # Link file descriptor #6 with stdout.
 exec > $log_stdout  # stdout replaced with file $log_stdout.
@@ -267,16 +274,13 @@ function encrypt_file() {
   # we want to store the passphrase in a temporary file rather than
   # pass it to openssl on the command line where it would be visible
   # in the process tree
-  local _passphrase_file=$(mktemp "$CONFIG_BACKUPDIR/.opensslpass.XXXX")
+  local _passphrase_file="$TEMP_PATH/opensslpass"
   chmod 600 "$_passphrase_file"
   echo "$CONFIG_ENCRYPT_PASSPHRASE" > "$_passphrase_file"
 
   $CONFIG_OPENSSL $ENCRYPTION_CIPHER -a -salt -pass file:"$_passphrase_file" -in "$_fname" -out "${_new_fname}"
   echo "${_new_fname}"
 
-  ### TODO: handle this more securely / reliably (eg, if openssl fails and
-  ###       bash aborts us before getting here) Probably need to use an
-  ###       exit hook with a cleanup function?
   rm -f "$_passphrase_file" "$_fname"
   return 0
 }
@@ -536,9 +540,5 @@ if [[ -s "$log_stderr" ]]; then
 else
     STATUS=0
 fi
-
-# Clean up Logfile
-rm -f "$log_stdout"
-rm -f "$log_stderr"
 
 exit $STATUS
