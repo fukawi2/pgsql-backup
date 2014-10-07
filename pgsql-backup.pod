@@ -168,6 +168,16 @@ Type:     C<yes> or C<no>
 
 Default:  yes
 
+=head2 CONFIG_DUMP_GLOBALS
+
+Make a dump of the PostgreSQL globals (ie login roles). If set to C<yes> then
+pg_dumpall (NOT pg_dump) is called with with C<--globals-only> flag and output
+is saved to a distinct file in the C<CONFIG_BACKUPDIR> path.
+
+Type:     C<yes> or C<no>
+
+Default:  yes
+
 =head2 CONFIG_DOWEEKLY
 
 Which day to create a weekly archive of the dumps. Use '0' to not do weekly
@@ -337,21 +347,21 @@ A sample hook is included: F<hook-postbackup.sh>
 
 =head1 SECURITY
 
-Database dumps created by this script are unencrypted; you should take into
-consideration the following (incomplete list) of implications, especially if
-your database(s) store sensitive information such as usernames, passwords,
-credit card details or other personal information (espeically those of your
-customers).
+Database dumps created by this script are unencrypted by default; you should
+take into consideration the following (incomplete list) of implications,
+especially if your database(s) store sensitive information such as usernames,
+passwords, credit card details or other personal information (especially those
+of your customers).
 
 =over 4
 
 =item * When writing to disk, ensure the backup directory has restictive
 permissions to prevent unauthorized users gaining access to the backups.
 
-=item * Use the L</POSTBACKUP> hook to encrypt your backups.
+=item * Enable encryption of the output files. See L</CONFIG_ENCRYPT>.
 
 =item * When emailing backup dumps, avoid the emails being trasmitted over
-untrusted networks (ie, the internet). Internal mail systems only. Be aware
+untrusted networks (eg, the internet). Internal mail systems only. Be aware
 of mail systems that archive emails may retain copies of your backups.
 
 =item * If you don't administer the email server, please respect your email

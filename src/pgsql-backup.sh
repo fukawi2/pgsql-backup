@@ -20,7 +20,7 @@
 #
 
 # Version Number
-VER=0.9.14
+VER=0.9.15
 
 set -e  # treat any error as fatal
 
@@ -47,6 +47,7 @@ function set_config_defaults() {
   CONFIG_MAILADDR='root'
   CONFIG_DBEXCLUDE=''
   CONFIG_CREATE_DATABASE='yes'
+  CONFIG_DUMP_GLOBALS='yes'
   CONFIG_DOWEEKLY='1'
   CONFIG_COMP='none'
   CONFIG_LATEST='1'
@@ -57,13 +58,14 @@ function set_config_defaults() {
   CONFIG_POSTBACKUP=''
   CONFIG_ENCRYPT=no
 
-  CONFIG_PG_DUMP=$(which pg_dump 2> /dev/null || true)
-  CONFIG_PSQL=$(which psql 2> /dev/null || true)
-  CONFIG_MAILX=$(which mail 2> /dev/null || true)
-  CONFIG_GZIP=$(which gzip  2> /dev/null || true)
-  CONFIG_BZIP2=$(which bzip2 2> /dev/null || true)
-  CONFIG_XZ=$(which xz 2> /dev/null || true)
-  CONFIG_OPENSSL=$(which openssl 2> /dev/null || true)
+  CONFIG_PG_DUMP=$(command -v pg_dump || true)
+  CONFIG_PG_DUMPALL=$(command -v pg_dumpall || true)
+  CONFIG_PSQL=$(command -v psql || true)
+  CONFIG_MAILX=$(command -v mail || true)
+  CONFIG_GZIP=$(command -v gzip || true)
+  CONFIG_BZIP2=$(command -v bzip2 || true)
+  CONFIG_XZ=$(command -v xz || true)
+  CONFIG_OPENSSL=$(command -v openssl || true)
 }
 
 # Path to options file
@@ -100,9 +102,10 @@ source $rc_fname || { echo "Error reading configuration file: $rc_fname" >&2; ex
 
 # Make sure our binaries are good
 missing_bin=''
-[[ ! -x "$CONFIG_PG_DUMP" ]] && missing_bin="$missing_bin\t'pgdump' not found: $CONFIG_PG_DUMP\n"
-[[ ! -x "$CONFIG_PSQL" ]]    && missing_bin="$missing_bin\t'psql' not found: $CONFIG_PSQL\n"
-[[ ! -x "$CONFIG_MAILX" ]]   && missing_bin="$missing_bin\t'mail' not found: $CONFIG_MAILX\n"
+[[ ! -x "$CONFIG_PG_DUMP" ]]    && missing_bin="$missing_bin\t'pgdump' not found: $CONFIG_PG_DUMP\n"
+[[ ! -x "$CONFIG_PG_DUMPALL" ]] && missing_bin="$missing_bin\t'pgdumpall' not found: $CONFIG_PG_DUMPALL\n"
+[[ ! -x "$CONFIG_PSQL" ]]       && missing_bin="$missing_bin\t'psql' not found: $CONFIG_PSQL\n"
+[[ ! -x "$CONFIG_MAILX" ]]      && missing_bin="$missing_bin\t'mail' not found: $CONFIG_MAILX\n"
 [[ ! -x "$CONFIG_GZIP"    && "$CONFIG_COMP" == 'gzip' ]]   && missing_bin="$missing_bin\t'gzip' not found: $CONFIG_GZIP\n"
 [[ ! -x "$CONFIG_BZIP2"   && "$CONFIG_COMP" == 'bzip2' ]]  && missing_bin="$missing_bin\t'bzip2' not found: $CONFIG_BZIP2\n"
 [[ ! -x "$CONFIG_XZ"      && "$CONFIG_COMP" == 'xz' ]]     && missing_bin="$missing_bin\t'xz' not found: $CONFIG_XZ\n"
@@ -116,6 +119,14 @@ fi
 
 # strip any trailing slash from BACKUPDIR
 CONFIG_BACKUPDIR="${CONFIG_BACKUPDIR%/}"
+
+# we need a temporary directory to work with and we'll throw in
+# an EXIT hook to make sure it is cleaned up when we're finished
+function cleanup() {
+  rm -Rf "$TEMP_PATH"
+}
+declare -r TEMP_PATH=$(mktemp -d --tmpdir '.pgsqlbup.XXXX')
+trap cleanup EXIT
 
 # set our umask
 umask $CONFIG_UMASK
@@ -131,10 +142,12 @@ declare -r CONFIG_MAXATTSIZE
 declare -r CONFIG_MAILADDR
 declare -r CONFIG_DBEXCLUDE
 declare -r CONFIG_CREATE_DATABASE
+declare -r CONFIG_DUMP_GLOBALS
 declare -r CONFIG_DOWEEKLY
 declare -r CONFIG_COMP
 declare -r CONFIG_LATEST
 declare -r CONFIG_PG_DUMP
+declare -r CONFIG_PG_DUMPALL
 declare -r CONFIG_PSQL
 declare -r CONFIG_GZIP
 declare -r CONFIG_BZIP2
@@ -151,14 +164,15 @@ export PGHOST="$CONFIG_PGHOST"
 export PGPORT="$CONFIG_PGPORT"
 export PGDATABASE="$CONFIG_PGDATABASE"
 
-FULLDATE=$(date +%Y-%m-%d_%Hh%Mm)  # Datestamp e.g 2002-09-21_11h52m
-DOW=$(date +%A)                    # Day of the week e.g. "Monday"
-DNOW=$(date +%u)                   # Day number of the week 1 to 7 where 1 represents Monday
-DOM=$(date +%d)                    # Date of the Month e.g. 27
-M=$(date +%B)                      # Month e.g "January"
-W=$(date +%V)                      # Week Number e.g 37
+declare -r FULLDATE=$(date +%Y-%m-%d_%Hh%Mm)  # Datestamp e.g 2002-09-21_11h52m
+declare -r DOW=$(date +%A)                    # Day of the week e.g. "Monday"
+declare -r DNOW=$(date +%u)                   # Day number of the week 1 to 7 where 1 represents Monday
+declare -r DOM=$(date +%d)                    # Date of the Month e.g. 27
+declare -r M=$(date +%B)                      # Month e.g "January"
+declare -r W=$(date +%V)                      # Week Number e.g 37
 backupfiles=""
-OPT="--blobs"  # OPT string for use with pg_dump (format is appended below)
+declare PG_DUMP_OPTS="--blobs"    # options for use with pg_dump (format is appended below)
+declare PG_DUMPALL_OPTS=""        # options for use with pg_dumpall
 
 # Does backup dir exist and can we write to it?
 [[ ! -n "$CONFIG_BACKUPDIR" ]]  && { echo "Configuration option 'CONFIG_BACKUPDIR' is not optional!" >&2; exit 2; }
@@ -169,7 +183,6 @@ OPT="--blobs"  # OPT string for use with pg_dump (format is appended below)
 [[ ! -d "$CONFIG_BACKUPDIR/daily" ]]    && mkdir "$CONFIG_BACKUPDIR/daily"
 [[ ! -d "$CONFIG_BACKUPDIR/weekly" ]]   && mkdir "$CONFIG_BACKUPDIR/weekly"
 [[ ! -d "$CONFIG_BACKUPDIR/monthly" ]]  && mkdir "$CONFIG_BACKUPDIR/monthly"
-[[ ! -d "$CONFIG_BACKUPDIR/logs" ]]     && mkdir "$CONFIG_BACKUPDIR/logs"
 if [[ "$CONFIG_LATEST" == "yes" ]] ; then
   [[ ! -d "$CONFIG_BACKUPDIR/latest" ]] && mkdir "$CONFIG_BACKUPDIR/latest"
   # cleanup previous 'latest' links
@@ -193,11 +206,11 @@ case "$CONFIG_DUMPFORMAT" in
   OUTEXT='dump'
   ;;
 esac
-OPT="$OPT --format=${CONFIG_DUMPFORMAT}"
+PG_DUMP_OPTS="$PG_DUMP_OPTS --format=${CONFIG_DUMPFORMAT}"
 
 # IO redirection for logging.
-log_stdout=$(mktemp "$CONFIG_BACKUPDIR/logs/$CONFIG_PGHOST-$$-log.XXXX") # Logfile Name
-log_stderr=$(mktemp "$CONFIG_BACKUPDIR/logs/$CONFIG_PGHOST-$$-err.XXXX") # Error Logfile Name
+log_stdout="$TEMP_PATH/$CONFIG_PGHOST-$$.log" # Logfile Name
+log_stderr="$TEMP_PATH/$CONFIG_PGHOST-$$.err" # Error Logfile Name
 touch $log_stdout
 exec 6>&1           # Link file descriptor #6 with stdout.
 exec > $log_stdout  # stdout replaced with file $log_stdout.
@@ -212,7 +225,12 @@ exec 2> $log_stderr # stderr replaced with file $log_stderr.
 function dbdump() {
   local _args="$1"
   local _output_fname="$2"
-  $CONFIG_PG_DUMP $OPT $_args > $_output_fname
+  $CONFIG_PG_DUMP $PG_DUMP_OPTS $_args > $_output_fname
+  return $?
+}
+function dump_globals() {
+  local _output_fname="$1"
+  $CONFIG_PG_DUMPALL $PG_DUMPALL_OPTS --globals-only > $_output_fname
   return $?
 }
 
@@ -256,16 +274,13 @@ function encrypt_file() {
   # we want to store the passphrase in a temporary file rather than
   # pass it to openssl on the command line where it would be visible
   # in the process tree
-  local _passphrase_file=$(mktemp "$CONFIG_BACKUPDIR/.opensslpass.XXXX")
+  local _passphrase_file="$TEMP_PATH/opensslpass"
   chmod 600 "$_passphrase_file"
   echo "$CONFIG_ENCRYPT_PASSPHRASE" > "$_passphrase_file"
 
   $CONFIG_OPENSSL $ENCRYPTION_CIPHER -a -salt -pass file:"$_passphrase_file" -in "$_fname" -out "${_new_fname}"
   echo "${_new_fname}"
 
-  ### TODO: handle this more securely / reliably (eg, if openssl fails and
-  ###       bash aborts us before getting here) Probably need to use an
-  ###       exit hook with a cleanup function?
   rm -f "$_passphrase_file" "$_fname"
   return 0
 }
@@ -273,7 +288,7 @@ function encrypt_file() {
 function link_latest() {
   local _fname="$1"
   if [[ "$CONFIG_LATEST" == 'yes' ]] ; then
-    ln -f "${_fname}" "$CONFIG_BACKUPDIR/latest/"
+    ln -sf "${_fname}" "$CONFIG_BACKUPDIR/latest/"
   fi
   return 0
 }
@@ -283,7 +298,10 @@ function link_latest() {
 # Hostname for LOG information; also append socket to
 if [[ "$CONFIG_PGHOST" == "localhost" ]] ; then
   HOST="$HOSTNAME"
-  [[ "$CONFIG_SOCKET" ]] && OPT="$OPT --host=$CONFIG_SOCKET"
+  if [[ "$CONFIG_SOCKET" ]] ; then
+    PG_DUMP_OPTS="$PG_DUMP_OPTS --host=$CONFIG_SOCKET"
+    PG_DUMPALL_OPTS="$PG_DUMPALL_OPTS --host=$CONFIG_SOCKET"
+  fi
 else
   HOST=$CONFIG_PGHOST
 fi
@@ -315,9 +333,9 @@ fi
 
 # ask pg_dump to include CREATE DATABASE in the dump output?
 if [[ "$CONFIG_CREATE_DATABASE" == "no" ]] ; then
-  OPT="$OPT --no-create"
+  PG_DUMP_OPTS="$PG_DUMP_OPTS --no-create"
 else
-  OPT="$OPT --create"
+  PG_DUMP_OPTS="$PG_DUMP_OPTS --create"
 fi
 
 # If backing up all DBs on the server
@@ -333,26 +351,31 @@ else
   DBNAMES="$CONFIG_DBNAMES"
 fi
 
+# what part of the rotation are we dumping this time?
+declare -u write_monthly write_weekly write_daily
+if [[ $DOM == "01" ]] ; then
+  # Monthly Backup
+  write_monthly='yes'
+elif [[ $DNOW == $DOWEEKLY ]] ; then
+  # Weekly Backup
+  write_weekly='yes'
+else
+  # Daily Backup
+  write_daily='yes'
+fi
+
 for DB in $DBNAMES ; do
   # Create Seperate directory for each DB
   [[ ! -d "$CONFIG_BACKUPDIR/monthly/$DB" ]]  && mkdir "$CONFIG_BACKUPDIR/monthly/$DB"
   [[ ! -d "$CONFIG_BACKUPDIR/weekly/$DB" ]]   && mkdir "$CONFIG_BACKUPDIR/weekly/$DB"
   [[ ! -d "$CONFIG_BACKUPDIR/daily/$DB" ]]    && mkdir "$CONFIG_BACKUPDIR/daily/$DB"
 
-  if [[ $DOM == "01" ]] ; then
+  if [[ -n "$write_monthly" ]] ; then
     # Monthly Backup
     echo Monthly Backup of $DB...
     # note we never automatically delete old monthly backups
     outfile="${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
-    dbdump "${DB}" "$outfile"
-    outfile=$(compress_file "$outfile")
-    outfile=$(encrypt_file "$outfile")
-    link_latest "$outfile"
-    echo "Backup written to $(basename $outfile)"
-    backupfiles="${backupfiles} $outfile"
-    echo
-    echo '----------------------------------------------------------------------'
-  elif [[ $DNOW == $DOWEEKLY ]] ; then
+  elif [[ -n "$write_weekly" ]] ; then
     # Weekly Backup
     echo "Weekly Backup of Database '$DB'"
     echo "Rotating 5 weeks Backups..."
@@ -365,30 +388,68 @@ for DB in $DBNAMES ; do
     fi
     rm -f $CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$REMW.*
     outfile="$CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
-    dbdump "$DB" "$outfile"
-    outfile=$(compress_file "$outfile")
-    outfile=$(encrypt_file "$outfile")
-    link_latest "$outfile"
-    echo "Backup written to $(basename $outfile)"
-    backupfiles="$backupfiles $outfile"
-    echo
-    echo '----------------------------------------------------------------------'
-  else
+  elif [[ -n "$write_daily" ]] ; then
     # Daily Backup
     echo "Daily Backup of Database '$DB'"
     echo "Rotating last weeks Backup..."
     rm -f $CONFIG_BACKUPDIR/daily/$DB/*.$DOW.*
     outfile="$CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
-    dbdump "$DB" "$outfile"
-    outfile=$(compress_file "$outfile")
-    outfile=$(encrypt_file "$outfile")
-    link_latest "$outfile"
-    echo "Backup written to $(basename $outfile)"
-    backupfiles="$backupfiles $outfile"
-    echo
-    echo '----------------------------------------------------------------------'
+  else
+    # this is a bug if we get here
+    echo "Ooops! Bug detected."
+    exit -1
   fi
+
+  # do the dump now we know where to write to
+  dbdump "${DB}" "$outfile"
+  outfile=$(compress_file "$outfile")
+  outfile=$(encrypt_file "$outfile")
+  link_latest "$outfile"
+  echo "Backup written to $(basename $outfile)"
+  backupfiles="${backupfiles} $outfile"
+  echo
+  echo '----------------------------------------------------------------------'
 done
+
+# dump globals (eg, login roles etc)
+if [[ "$CONFIG_DUMP_GLOBALS" == 'yes' ]] ; then
+  if [[ -n "$write_monthly" ]] ; then
+    echo Monthly Backup of globals...
+    # note we never automatically delete old monthly backups
+    outfile="${CONFIG_BACKUPDIR}/monthly/globals_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
+  elif [[ -n "$write_weekly" ]] ; then
+    # Weekly Backup
+    echo "Weekly Backup of globals"
+    echo "Rotating 5 weeks backups..."
+    if [ $W -le 05 ] ; then
+      REMW="$(expr 48 + $W)"
+    elif [ $W -lt 15 ] ; then
+      REMW="0$(expr $W - 5)"
+    else
+      REMW="$(expr $W - 5)"
+    fi
+    rm -f $CONFIG_BACKUPDIR/weekly/globals_week.$REMW.*
+    outfile="$CONFIG_BACKUPDIR/weekly/globals_week.$W.$FULLDATE.${OUTEXT}"
+  elif [[ -n "$write_daily" ]] ; then
+    # Daily Backup
+    echo "Daily Backup of globals"
+    echo "Rotating last weeks backups..."
+    rm -f $CONFIG_BACKUPDIR/daily/globals*.$DOW.*
+    outfile="$CONFIG_BACKUPDIR/daily/globals_$FULLDATE.$DOW.${OUTEXT}"
+  else
+    # this is a bug if we get here
+    echo "Ooops! Bug detected."
+    false;
+  fi
+
+  dump_globals "$outfile"
+  outfile=$(compress_file "$outfile")
+  outfile=$(encrypt_file "$outfile")
+  echo "Globals written to $(basename $outfile)"
+  backupfiles="${backupfiles} $outfile"
+  echo
+  echo '----------------------------------------------------------------------'
+fi
 
 if [[ "$CONFIG_ENCRYPT" == 'yes' ]] ; then
   cat <<EOT
@@ -479,9 +540,5 @@ if [[ -s "$log_stderr" ]]; then
 else
     STATUS=0
 fi
-
-# Clean up Logfile
-rm -f "$log_stdout"
-rm -f "$log_stderr"
 
 exit $STATUS

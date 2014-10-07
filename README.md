@@ -29,7 +29,7 @@ Use `PREFIX` to change install location
     make PREFIX=/opt install
 
 You will probably want the script to run on a regular basis; you can do this
-using cron. Create `/etc/cron.d/pgsql-backup with the following contents:
+using cron. Create `/etc/cron.d/pgsql-backup` with the following contents:
 
     0 1 * * * root /usr/local/bin/pgsql-backup
 
