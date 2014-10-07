@@ -275,6 +275,7 @@ function encrypt_file() {
   # pass it to openssl on the command line where it would be visible
   # in the process tree
   local _passphrase_file="$TEMP_PATH/opensslpass"
+  touch "$_passphrase_file"
   chmod 600 "$_passphrase_file"
   echo "$CONFIG_ENCRYPT_PASSPHRASE" > "$_passphrase_file"
 
