@@ -395,7 +395,7 @@ for DB in $DBNAMES ; do
     # Monthly Backup
     echo Monthly Backup of $DB...
     # note we never automatically delete old monthly backups
-    outfile="${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
+    outfile="${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${OUTEXT}"
   elif [[ -n "$write_weekly" ]] ; then
     # Weekly Backup
     echo "Weekly Backup of Database '$DB'"
@@ -437,7 +437,7 @@ if [[ "$CONFIG_DUMP_GLOBALS" == 'yes' ]] ; then
   if [[ -n "$write_monthly" ]] ; then
     echo Monthly Backup of globals...
     # note we never automatically delete old monthly backups
-    outfile="${CONFIG_BACKUPDIR}/monthly/globals_${FULLDATE}.${M}.${MDB}.${OUTEXT}"
+    outfile="${CONFIG_BACKUPDIR}/monthly/globals_${FULLDATE}.${M}.${OUTEXT}"
   elif [[ -n "$write_weekly" ]] ; then
     # Weekly Backup
     echo "Weekly Backup of globals"
