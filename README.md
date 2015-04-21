@@ -6,11 +6,6 @@ Test changes using: http://daringfireball.net/projects/markdown/dingus
 
 A script for automated backups of PostgreSQL Databases
 
-This script is a fork of "*MySQL Backup Script*" version 2.5 Copyright &copy;
-2002-2003 <wipe_out@lycos.co.uk> available from:
-
-[http://sourceforge.net/projects/automysqlbackup/](http://sourceforge.net/projects/automysqlbackup/)
-
 ## Overview
 
 This script is designed to be run daily, but can be run more often. Rolling
@@ -58,3 +53,11 @@ valid for your environment:
 
 Refer to the man page for details about configuring PostgreSQL permissions in
 an appropriate manner for pgsql-backup.
+
+### Acknowledgements
+
+This script is a fork of "*MySQL Backup Script*" version 2.5 Copyright &copy;
+2002-2003 <wipe_out@lycos.co.uk> distributed under the GPLv2 license and
+available from:
+
+[http://sourceforge.net/projects/automysqlbackup/](http://sourceforge.net/projects/automysqlbackup/)
