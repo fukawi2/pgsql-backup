@@ -165,11 +165,11 @@ export PGPORT="$CONFIG_PGPORT"
 export PGDATABASE="$CONFIG_PGDATABASE"
 
 declare -r FULLDATE=$(date +%Y-%m-%d_%Hh%Mm)  # Datestamp e.g 2002-09-21_11h52m
-declare -r DOW=$(date +%A)                    # Day of the week e.g. "Monday"
-declare -r DNOW=$(date +%u)                   # Day number of the week 1 to 7 where 1 represents Monday
+declare -r DOW_NAME=$(date +%A)               # Day of the week e.g. "Monday"
+declare -r DOW_NUMBER=$(date +%u)             # Day number of the week 1 to 7 where 1 represents Monday
 declare -r DOM=$(date +%d)                    # Date of the Month e.g. 27
-declare -r M=$(date +%B)                      # Month e.g "January"
-declare -r W=$(date +%V)                      # Week Number e.g 37
+declare -r MONTH_NAME=$(date +%B)             # Month e.g "January"
+declare -r WEEK_NUMBER=$(date +%V)            # Week Number e.g 37
 backupfiles=""
 declare PG_DUMP_OPTS="--blobs"    # options for use with pg_dump (format is appended below)
 declare PG_DUMPALL_OPTS=""        # options for use with pg_dumpall
@@ -377,7 +377,7 @@ declare -u write_monthly write_weekly write_daily
 if [[ $DOM == "01" ]] ; then
   # Monthly Backup
   write_monthly='yes'
-elif [[ $DNOW == $CONFIG_DOWEEKLY ]] ; then
+elif [[ $DOW_NUMBER == $CONFIG_DOWEEKLY ]] ; then
   # Weekly Backup
   write_weekly='yes'
 else
@@ -395,26 +395,26 @@ for DB in $DBNAMES ; do
     # Monthly Backup
     echo Monthly Backup of $DB...
     # note we never automatically delete old monthly backups
-    outfile="${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${M}.${OUTEXT}"
+    outfile="${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${MONTH_NAME}.${OUTEXT}"
   elif [[ -n "$write_weekly" ]] ; then
     # Weekly Backup
     echo "Weekly Backup of Database '$DB'"
     echo "Rotating 5 weeks Backups..."
-    if [ $W -le 05 ] ; then
-      REMW="$(expr 48 + $W)"
-    elif [ $W -lt 15 ];then
-      REMW="0$(expr $W - 5)"
+    if [ $WEEK_NUMBER -le 5 ] ; then
+      REMW="$(expr 48 + $WEEK_NUMBER)"
+    elif [ $WEEK_NUMBER -lt 15 ];then
+      REMW="0$(expr $WEEK_NUMBER - 5)"
     else
-      REMW="$(expr $W - 5)"
+      REMW="$(expr $WEEK_NUMBER - 5)"
     fi
-    rm -f $CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$REMW.*
-    outfile="$CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.$W.$FULLDATE.${OUTEXT}"
+    rm -f $CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.${REMW}.*
+    outfile="$CONFIG_BACKUPDIR/weekly/$DB/${DB}_week.${WEEK_NUMBER}.$FULLDATE.${OUTEXT}"
   elif [[ -n "$write_daily" ]] ; then
     # Daily Backup
     echo "Daily Backup of Database '$DB'"
     echo "Rotating last weeks Backup..."
-    rm -f $CONFIG_BACKUPDIR/daily/$DB/*.$DOW.*
-    outfile="$CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.$DOW.${OUTEXT}"
+    rm -f $CONFIG_BACKUPDIR/daily/$DB/*.${DOW_NAME}.*
+    outfile="$CONFIG_BACKUPDIR/daily/$DB/${DB}_$FULLDATE.${DOW_NAME}.${OUTEXT}"
   else
     # this is a bug if we get here
     echo "Ooops! Bug detected."
@@ -437,26 +437,26 @@ if [[ "$CONFIG_DUMP_GLOBALS" == 'yes' ]] ; then
   if [[ -n "$write_monthly" ]] ; then
     echo Monthly Backup of globals...
     # note we never automatically delete old monthly backups
-    outfile="${CONFIG_BACKUPDIR}/monthly/globals_${FULLDATE}.${M}.${OUTEXT}"
+    outfile="${CONFIG_BACKUPDIR}/monthly/globals_${FULLDATE}.${MONTH_NAME}.${OUTEXT}"
   elif [[ -n "$write_weekly" ]] ; then
     # Weekly Backup
     echo "Weekly Backup of globals"
     echo "Rotating 5 weeks backups..."
-    if [ $W -le 05 ] ; then
-      REMW="$(expr 48 + $W)"
-    elif [ $W -lt 15 ] ; then
-      REMW="0$(expr $W - 5)"
+    if [ $WEEK_NUMBER -le 5 ] ; then
+      REMW="$(expr 48 + $WEEK_NUMBER)"
+    elif [ $WEEK_NUMBER -lt 15 ] ; then
+      REMW="0$(expr $WEEK_NUMBER - 5)"
     else
-      REMW="$(expr $W - 5)"
+      REMW="$(expr $WEEK_NUMBER - 5)"
     fi
-    rm -f $CONFIG_BACKUPDIR/weekly/globals_week.$REMW.*
-    outfile="$CONFIG_BACKUPDIR/weekly/globals_week.$W.$FULLDATE.${OUTEXT}"
+    rm -f $CONFIG_BACKUPDIR/weekly/globals_week.${REMW}.*
+    outfile="$CONFIG_BACKUPDIR/weekly/globals_week.${WEEK_NUMBER}.$FULLDATE.${OUTEXT}"
   elif [[ -n "$write_daily" ]] ; then
     # Daily Backup
     echo "Daily Backup of globals"
     echo "Rotating last weeks backups..."
-    rm -f $CONFIG_BACKUPDIR/daily/globals*.$DOW.*
-    outfile="$CONFIG_BACKUPDIR/daily/globals_$FULLDATE.$DOW.${OUTEXT}"
+    rm -f $CONFIG_BACKUPDIR/daily/globals*.${DOW_NAME}.*
+    outfile="$CONFIG_BACKUPDIR/daily/globals_$FULLDATE.${DOW_NAME}.${OUTEXT}"
   else
     # this is a bug if we get here
     echo "Ooops! Bug detected."
