@@ -377,7 +377,7 @@ declare -u write_monthly write_weekly write_daily
 if [[ $DOM == "01" ]] ; then
   # Monthly Backup
   write_monthly='yes'
-elif [[ $DNOW == $DOWEEKLY ]] ; then
+elif [[ $DNOW == $CONFIG_DOWEEKLY ]] ; then
   # Weekly Backup
   write_weekly='yes'
 else
