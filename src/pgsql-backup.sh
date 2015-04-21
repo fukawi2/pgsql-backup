@@ -20,7 +20,7 @@
 #
 
 # Version Number
-VER=0.9.15
+VER=0.9.17
 
 set -e  # treat any error as fatal
 
@@ -286,10 +286,30 @@ function encrypt_file() {
   return 0
 }
 
+function realpath() {
+  # the `realpath` utility requires coreutils 8.15 stable distros like
+  # rhel don't package yet, so we'll emulate the behavior we need in
+  # this function.
+  # this can be replaced in the future with:
+  #    realpath --relative-to /mnt/latest $fname
+  source="$1"
+  target="$2"
+
+  common_part="$source"
+  back=
+  while [ "${target#$common_part}" = "${target}" ]; do
+    common_part=$(dirname $common_part)
+    back="../${back}"
+  done
+
+  echo ${back}${target#$common_part/}
+}
+
 function link_latest() {
   local _fname="$1"
   if [[ "$CONFIG_LATEST" == 'yes' ]] ; then
-    ln -sf "${_fname}" "$CONFIG_BACKUPDIR/latest/"
+    link_target="$(realpath "$CONFIG_BACKUPDIR/latest/" "${_fname}")"
+    ln -sf "$link_target" "$CONFIG_BACKUPDIR/latest/"
   fi
   return 0
 }
@@ -357,7 +377,7 @@ declare -u write_monthly write_weekly write_daily
 if [[ $DOM == "01" ]] ; then
   # Monthly Backup
   write_monthly='yes'
-elif [[ $DNOW == $DOWEEKLY ]] ; then
+elif [[ $DNOW == $CONFIG_DOWEEKLY ]] ; then
   # Weekly Backup
   write_weekly='yes'
 else
