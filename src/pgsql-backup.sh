@@ -68,6 +68,17 @@ function set_config_defaults() {
   CONFIG_OPENSSL=$(command -v openssl || true)
 }
 
+usage() {
+  printf 'Usage: %s [-d /path/to/backups] [-d dbname]\n' "$0"
+  printf 'PostreSQL Backup Utility; maintain rolling backups of PostgreSQL databases.\n'
+  printf 'Example: %s -d /mnt/backups/pgsql\n\n' "$0"
+  printf 'Options:\n'
+  printf '   %-10s %-50s\n' \
+    '-d /path/' 'Write backups to /path/' \
+    '-D dbname' 'Only backup the named database (dbname)' \
+    '-h'   'This help'
+}
+
 # Path to options file
 user_rc="$1"
 if [[ -n "$user_rc" && -f "$user_rc" ]] ; then
