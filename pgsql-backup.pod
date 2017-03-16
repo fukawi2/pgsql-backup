@@ -34,10 +34,29 @@ Backups can also be optionally emailed as attachments.
 
 =head1 OPTIONS
 
-Only a single argument is accepted on the command line: a specific path to a
-configuration file. This argument is OPTIONAL. Example:
+Some of the configuration options in the rc file may be overridden on the
+command line at run time. An alternative/specific rc file may also be passed
+using the C<-c> option.
 
-  pgsql-backup /var/lib/pgsql/pgsql-backup.conf
+=over 4
+
+=item -c /path/to/rcfile
+
+Use the specified rc configuration file.
+
+=item -d /path/to/output
+
+Write the backup output to the specified path.
+
+=item -D dbname
+
+Backup only the specified database name.
+
+=item -h
+
+Help
+
+=back
 
 =head1 CONFIGURATION
 
