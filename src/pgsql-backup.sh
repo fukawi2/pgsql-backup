@@ -73,10 +73,11 @@ usage() {
   printf 'PostreSQL Backup Utility; maintain rolling backups of PostgreSQL databases.\n'
   printf 'Example: %s -d /mnt/backups/pgsql\n\n' "$0"
   printf 'Options:\n'
-  printf '   %-10s %-50s\n' \
-    '-d /path/' 'Write backups to /path/' \
-    '-D dbname' 'Only backup the named database (dbname)' \
-    '-h'   'This help'
+  printf '   %-20s %-50s\n' \
+    '-c /path/to/rcfile'  'Use specified rc configuration file' \
+    '-d /path/'           'Write backups to /path/' \
+    '-D dbname'           'Only backup the named database (dbname)' \
+    '-h'                  'This help'
 }
 
 # process the cmdline arguments
