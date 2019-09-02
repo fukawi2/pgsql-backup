@@ -204,6 +204,7 @@ declare -r DOW_NUMBER=$(date +%u)             # Day number of the week 1 to 7 wh
 declare -r DOM=$(date +%d)                    # Date of the Month e.g. 27
 declare -r MONTH_NAME=$(date +%B)             # Month e.g "January"
 declare -r WEEK_NUMBER=$(date +%V)            # Week Number e.g 37
+declare -r DATE_YYMM=$(date +%Y-%m)           # Date in YYMM format (for monthly dumps)
 backupfiles=""
 declare PG_DUMP_OPTS="--blobs"    # options for use with pg_dump (format is appended below)
 declare PG_DUMPALL_OPTS=""        # options for use with pg_dumpall
@@ -429,7 +430,7 @@ for DB in $DBNAMES ; do
     # Monthly Backup
     echo Monthly Backup of $DB...
     # note we never automatically delete old monthly backups
-    outfile="${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${FULLDATE}.${MONTH_NAME}.${OUTEXT}"
+    outfile="${CONFIG_BACKUPDIR}/monthly/${DB}/${DB}_${DATE_YYMM}.${OUTEXT}"
   elif [[ -n "$write_weekly" ]] ; then
     # Weekly Backup
     echo "Weekly Backup of Database '$DB'"
